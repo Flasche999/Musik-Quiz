@@ -1,44 +1,30 @@
-# Online Musik‑Quiz (Echtzeit)
+# Online Musik‑Quiz mit Playlist-Datei
 
-Features
-- Räume mit 5‑stelligen Codes
-- Bis zu 6 Spieler pro Raum
-- Lobby mit Namenseingabe
-- Moderator steuert: Runde starten, Play, Pause, Buzzer freigeben, Nächste Runde
-- Buzz‑Lock: erster Buzz pausiert Musik für alle
-- Rundenstart‑Overlay
-- Einfache Playlist (Dateien unter /public/sounds)
+## Was ist neu?
+- **Separate Playlist-Datei:** `public/playlist.json`
+  - Trage dort deine MP3‑Dateien als Array ein, z. B.:
+    ```json
+    [
+      "sounds/song1.mp3",
+      "sounds/song2.mp3",
+      "sounds/song3.mp3"
+    ]
+    ```
+  - Beim Raumerstellen wird automatisch **playlist.json** geladen, falls im Moderator‑Feld nichts eingetragen wurde.
 
-## Lokal starten
-1. Node.js LTS installieren.
-2. Im Ordner `online-musik-quiz`:
-   ```bash
-   npm install
-   npm start
-   ```
-3. Moderator öffnen: `http://localhost:3000/moderator.html`
-4. Spieler öffnen: `http://localhost:3000/player.html` (auch auf anderen Geräten im selben Netz, IP statt localhost)
+## Start (lokal)
+```bash
+npm install
+npm start
+```
+- Moderator: `http://localhost:3000/moderator.html`
+- Spieler: `http://localhost:3000/player.html`
 
-> Autoplay-Hinweis: Jeder Client muss einmal interagieren (z. B. Button klicken), damit Audio abgespielt werden darf.
+## Playlist anpassen
+- Lege deine MP3s nach `public/sounds/`.
+- Editiere `public/playlist.json` (Reihenfolge = Rundenreihenfolge).
+- Optional: Im Moderator‑Screen kannst du eine **eigene Liste eintippen**, die **playlist.json** überschreibt.
 
-## Playlist
-- Lege MP3s in `public/sounds/` (z. B. `song1.mp3`, `song2.mp3` …).
-- Beim Raumerstellen kann der Moderator eine Komma‑Liste eintragen, sonst Standard‑Playlist wird verwendet.
-
-## Online deployen (schnell, kostenlos)
-### Render.com
-1. Repo (oder ZIP-Inhalt) in ein GitHub‑Repository pushen.
-2. Render → New → Web Service.
-3. Build Command: `npm install`
-4. Start Command: `node server.js`
-5. Deploy. Die URL z. B. `https://dein-service.onrender.com`:
-   - Moderator: `/moderator.html`
-   - Spieler: `/player.html`
-
-### Railway.app (ähnlich)
-- Neues Projekt → Deploy from GitHub → Start: `node server.js`
-
-## Port / Firewall
-- Nutzt Port `3000` lokal (änderbar via `PORT` env). WebSockets via Socket.IO.
-
-Viel Spaß! 🎵
+## Deploy (z. B. Render, Railway)
+- Start Command: `node server.js`
+- Statische Dateien liegen unter `public/`.

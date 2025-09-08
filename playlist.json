@@ -1,32 +1,32 @@
 [
-  {
-    "artist": "Artist 1",
-    "tracks": [
-      "sounds/artist1_auf gute freunde.mp3",
-      "sounds/artist1_danke für nichts.mp3",
-      "sounds/artist1_finde die wahrheit.mp3",
-      "sounds/artist1_song4.mp3",
-      "sounds/artist1_song5.mp3",
-      "sounds/artist1_song6.mp3",
-      "sounds/artist1_song7.mp3",
-      "sounds/artist1_song8.mp3",
-      "sounds/artist1_song9.mp3",
-      "sounds/artist1_song10.mp3"
-    ]
-  },
-  {
-    "artist": "Artist 2",
-    "tracks": [
-      "sounds/artist2_song1.mp3",
-      "sounds/artist2_song2.mp3",
-      "sounds/artist2_song3.mp3",
-      "sounds/artist2_song4.mp3",
-      "sounds/artist2_song5.mp3",
-      "sounds/artist2_song6.mp3",
-      "sounds/artist2_song7.mp3",
-      "sounds/artist2_song8.mp3",
-      "sounds/artist2_song9.mp3",
-      "sounds/artist2_song10.mp3"
-    ]
-  }
+{
+"name": "Playlist 1",
+"tracks": [
+{ "src": "sounds/p1_s1.mp3", "title": "Song A" },
+{ "src": "sounds/p1_s2.mp3", "title": "Song B" },
+{ "src": "sounds/p1_s3.mp3", "title": "Song C" },
+{ "src": "sounds/p1_s4.mp3", "title": "Song D" },
+{ "src": "sounds/p1_s5.mp3", "title": "Song E" },
+{ "src": "sounds/p1_s6.mp3", "title": "Song F" },
+{ "src": "sounds/p1_s7.mp3", "title": "Song G" },
+{ "src": "sounds/p1_s8.mp3", "title": "Song H" },
+{ "src": "sounds/p1_s9.mp3", "title": "Song I" },
+{ "src": "sounds/p1_s10.mp3", "title": "Song J" }
+]
+},
+{
+"name": "Playlist 2",
+"tracks": [
+"sounds/p2_s1.mp3",
+"sounds/p2_s2.mp3",
+"sounds/p2_s3.mp3",
+"sounds/p2_s4.mp3",
+"sounds/p2_s5.mp3",
+"sounds/p2_s6.mp3",
+"sounds/p2_s7.mp3",
+"sounds/p2_s8.mp3",
+"sounds/p2_s9.mp3",
+"sounds/p2_s10.mp3"
+]
+}
 ]

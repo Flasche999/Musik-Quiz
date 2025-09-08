@@ -1,0 +1,65 @@
+<!doctype html>
+function renderRounds(playlists, activeIndex){
+roundList.innerHTML = '';
+playlists.forEach((pl, i) => {
+const div = document.createElement('div');
+div.className = 'item' + (i===activeIndex?' active':'');
+div.textContent = pl.name || `Playlist ${i+1}`;
+roundList.appendChild(div);
+});
+}
+function renderSongs(total, active, currentTitle){
+songList.innerHTML = '';
+for (let i = total; i >= 1; i--) {
+const idxFromTop = i - 1;
+const div = document.createElement('div');
+div.className = 'song' + (idxFromTop===active ? ' active' : '');
+const left = document.createElement('div'); left.textContent = `Song ${i}`;
+const right = document.createElement('div'); right.className='badge';
+if (idxFromTop===active && currentTitle) right.textContent = currentTitle;
+div.appendChild(left); div.appendChild(right);
+songList.appendChild(div);
+}
+}
+
+
+socket.on('player:join-result', (r) => {
+if (r.ok){ el('#roomCode').textContent = r.code; el('#status').textContent = 'Beigetreten als ' + r.name; }
+else { el('#status').textContent = 'Fehler: ' + r.error; }
+});
+
+
+socket.on('ui:round-update', ({ progress, playlists, activeRound, activeSong, currentTitle }) => {
+el('#roundName').textContent = progress.roundName;
+renderRounds(playlists, activeRound);
+renderSongs(progress.songTotal, activeSong, currentTitle||'');
+});
+
+
+socket.on('round:prepare', ({ src, title }) => {
+audio.src = src || '';
+el('#currentTitle').textContent = title || '–';
+});
+socket.on('audio:play', () => audio.play().catch(()=>{}));
+socket.on('audio:pause', () => audio.pause());
+
+
+socket.on('buzz:first', ({ name }) => {
+el('#status').textContent = `🔔 ${name} war zuerst!`;
+});
+
+
+socket.on('room:update', ({ players }) => {
+const list = el('#players'); list.innerHTML = '';
+players.forEach(p => {
+const div = document.createElement('div'); div.className='player';
+div.innerHTML = `<span>${p.name}</span>`;
+list.appendChild(div);
+});
+});
+
+
+socket.on('status', (t) => el('#status').textContent = t);
+</script>
+</body>
+</html>

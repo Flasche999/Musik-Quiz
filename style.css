@@ -1,0 +1,21 @@
+:root{ --bg1:#0b1020; --bg2:#191f3a; --accent:#00e0ff; --accent2:#ff67e7; --text:#e9f1ff; --card:#121831aa; --btn:#283052; --btnText:#fff; --good:#16d26b; --bad:#ff5b6e;}
+*{box-sizing:border-box} html,body{height:100%}
+body{ margin:0; font-family:Inter,system-ui,Arial,sans-serif; color:var(--text); background:linear-gradient(135deg,var(--bg1),var(--bg2)); }
+.hidden{display:none} .card{ max-width:1000px; margin:5vh auto; padding:24px; background:var(--card); border:1px solid #3b4366; border-radius:18px; box-shadow:0 20px 60px #0007; }
+.grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px } .row{ display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap }
+input,button{ border-radius:12px; border:1px solid #3a4370; padding:12px 14px; background:#0f1430; color:var(--text) }
+button{ cursor:pointer; border:none; background:#263055; box-shadow:0 8px 24px #0006 } button.primary{ background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#07101a; font-weight:700 }
+.status{ text-align:center; margin:10px 0; min-height:24px; font-weight:700 }
+.badge{ display:inline-block; padding:2px 8px; border-radius:9999px; background:#0d193a; border:1px solid #4ac6ff }
+.flex{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; justify-content:space-between }
+.col{ flex:1 1 360px }
+.table{ width:100%; border-collapse:separate; border-spacing:0 8px }
+.table th{ text-align:left; font-size:14px; opacity:.8 }
+.table td, .table th{ padding:10px 12px; background:#0f1430; border:1px solid #2b335c }
+.table tr td:first-child, .table tr th:first-child{ border-top-left-radius:10px; border-bottom-left-radius:10px }
+.table tr td:last-child, .table tr th:last-child{ border-top-right-radius:10px; border-bottom-right-radius:10px }
+.banner{ text-align:center; font-weight:900; margin:8px 0; padding:10px 14px; border-radius:12px; }
+.banner.info{ background:#0d193a; border:1px solid #4ac6ff }
+.banner.good{ background:#0f3b2a; border:1px solid #1bb26e }
+.banner.bad{ background:#3b1720; border:1px solid #cf2d53 }
+.small{ font-size:13px; opacity:.9 }

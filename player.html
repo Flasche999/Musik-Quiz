@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player — Musik‑Quiz</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section class="card" id="join">
+    <h1>🎵 Musik‑Quiz — Spieler</h1>
+    <div class="grid">
+      <input id="code" type="text" placeholder="Raum-Code (z. B. ABC12)">
+      <input id="name" type="text" placeholder="Dein Name">
+    </div>
+    <div class="row"><button id="joinBtn" class="primary">Beitreten</button></div>
+  </section>
+
+  <section class="card hidden" id="room">
+    <h2>Raum: <span id="roomCode" class="badge"></span></h2>
+    <div class="status" id="status">Warte auf Rundestart…</div>
+
+    <div class="flex">
+      <div class="col">
+        <h3>Fortschritt</h3>
+        <div id="progressBox"></div>
+        <div class="row">
+          <button id="buzz" class="primary">BUZZ!</button>
+          <button id="btnVoteNext">➡️ Weiter (Next)</button>
+        </div>
+        <div class="small" id="nextInfo"></div>
+      </div>
+
+      <div class="col">
+        <h3>Spieler & Punkte</h3>
+        <table class="table">
+          <thead><tr><th>Spieler</th><th>Punkte</th></tr></thead>
+          <tbody id="scoreRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="firstBanner" class="banner info hidden"></div>
+    <div id="resultBanner" class="banner hidden"></div>
+
+    <audio id="music" preload="auto"></audio>
+  </section>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="shared.js"></script>
+  <script type="module" src="player.js"></script>
+</body>
+</html>

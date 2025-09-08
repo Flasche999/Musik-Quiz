@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moderator — Musik‑Quiz</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section class="card" id="setup">
+    <h1>🎵 Musik‑Quiz — Moderator</h1>
+    <p>Playlisten werden aus <b>playlist.json</b> geladen (bis zu 10 Playlisten, je bis zu 10 Lieder).</p>
+    <div class="row"><button id="createRoom" class="primary">Raum erstellen</button></div>
+  </section>
+
+  <section class="card hidden" id="room">
+    <h2>Raum-Code: <span id="roomCode" class="badge"></span></h2>
+    <div class="status" id="status">Warte auf Spieler…</div>
+
+    <div class="flex">
+      <div class="col">
+        <h3>Fortschritt</h3>
+        <div id="progressBox"></div>
+        <div class="row">
+          <button id="btnStartRound" class="primary">▶️ Runde starten</button>
+          <button id="btnPlay">▶️ Play</button>
+          <button id="btnPause">⏸️ Pause</button>
+          <button id="btnUnlock">🔄 Buzzer freigeben</button>
+          <button id="btnNext">➡️ Nächster Song</button>
+          <button id="btnCorrect" style="background:#184f37">✅ Richtig</button>
+          <button id="btnWrong" style="background:#5a2032">❌ Falsch</button>
+        </div>
+        <div id="allNextBanner" class="banner info hidden">Alle Spieler sind bereit. Starte die nächste Runde.</div>
+      </div>
+      <div class="col">
+        <h3>Spieler & Punkte</h3>
+        <table class="table">
+          <thead><tr><th>Spieler</th><th>Punkte</th><th class="small">Next?</th></tr></thead>
+          <tbody id="scoreRows"></tbody>
+        </table>
+        <div class="small" id="nextSummary"></div>
+      </div>
+    </div>
+
+    <div id="firstBanner" class="banner info hidden"></div>
+    <div id="resultBanner" class="banner hidden"></div>
+
+    <audio id="music" preload="auto"></audio>
+  </section>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="shared.js"></script>
+  <script type="module" src="mod.js"></script>
+</body>
+</html>

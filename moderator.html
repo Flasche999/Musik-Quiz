@@ -1,55 +1,83 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moderator — Musik‑Quiz</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <section class="card" id="setup">
-    <h1>🎵 Musik‑Quiz — Moderator</h1>
-    <p>Playlisten werden aus <b>playlist.json</b> geladen (bis zu 10 Playlisten, je bis zu 10 Lieder).</p>
-    <div class="row"><button id="createRoom" class="primary">Raum erstellen</button></div>
-  </section>
+<!doctype html>
+}
+function renderSongs(total, active, currentTitle){
+// Zeige N→1, active ist 0..N-1 (Server-Index)
+songList.innerHTML = '';
+for (let i = total; i >= 1; i--) {
+const idxFromTop = i - 1; // 0..N-1 von oben (Song N zuerst)
+const div = document.createElement('div');
+div.className = 'song' + (idxFromTop===active ? ' active' : '');
+const left = document.createElement('div');
+left.textContent = `Song ${i}`;
+const right = document.createElement('div');
+right.className = 'badge';
+if (idxFromTop===active && currentTitle) right.textContent = currentTitle;
+div.appendChild(left); div.appendChild(right);
+songList.appendChild(div);
+}
+}
 
-  <section class="card hidden" id="room">
-    <h2>Raum-Code: <span id="roomCode" class="badge"></span></h2>
-    <div class="status" id="status">Warte auf Spieler…</div>
 
-    <div class="flex">
-      <div class="col">
-        <h3>Fortschritt</h3>
-        <div id="progressBox"></div>
-        <div class="row">
-          <button id="btnStartRound" class="primary">▶️ Runde starten</button>
-          <button id="btnPlay">▶️ Play</button>
-          <button id="btnPause">⏸️ Pause</button>
-          <button id="btnUnlock">🔄 Buzzer freigeben</button>
-          <button id="btnNext">➡️ Nächster Song</button>
-          <button id="btnCorrect" style="background:#184f37">✅ Richtig</button>
-          <button id="btnWrong" style="background:#5a2032">❌ Falsch</button>
-        </div>
-        <div id="allNextBanner" class="banner info hidden">Alle Spieler sind bereit. Starte die nächste Runde.</div>
-      </div>
-      <div class="col">
-        <h3>Spieler & Punkte</h3>
-        <table class="table">
-          <thead><tr><th>Spieler</th><th>Punkte</th><th class="small">Next?</th></tr></thead>
-          <tbody id="scoreRows"></tbody>
-        </table>
-        <div class="small" id="nextSummary"></div>
-      </div>
-    </div>
+// Socket Events
+socket.on('mod:room-created', ({ code, progress, playlists }) => {
+el('#roomCode').textContent = code;
+el('#roundName').textContent = progress.roundName;
+renderRounds(playlists, progress.roundIndex - 1);
+renderSongs(progress.songTotal, progress.songIndex - 1, '');
+});
 
-    <div id="firstBanner" class="banner info hidden"></div>
-    <div id="resultBanner" class="banner hidden"></div>
 
-    <audio id="music" preload="auto"></audio>
-  </section>
+socket.on('ui:round-update', ({ progress, playlists, activeRound, activeSong, currentTitle }) => {
+el('#roundName').textContent = progress.roundName;
+renderRounds(playlists, activeRound);
+renderSongs(progress.songTotal, activeSong, currentTitle||'');
+});
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="shared.js"></script>
-  <script type="module" src="mod.js"></script>
+
+socket.on('round:prepare', ({ src, title }) => {
+audio.src = src || '';
+el('#currentTitle').textContent = title || '–';
+});
+socket.on('audio:play', () => audio.play().catch(()=>{}));
+socket.on('audio:pause', () => audio.pause());
+
+
+socket.on('buzz:first', ({ name }) => {
+el('#status').textContent = `🔔 ${name} hat zuerst gebuzzert!`;
+});
+
+
+socket.on('scores:update', (scores) => {
+const players = window._players || [];
+const list = el('#players');
+list.innerHTML = '';
+players.forEach(p => {
+const div = document.createElement('div');
+div.className = 'player';
+div.innerHTML = `<span>${p.name}</span><strong>${scores[p.id]||0}</strong>`;
+list.appendChild(div);
+});
+});
+
+
+socket.on('room:update', ({ players }) => {
+window._players = players;
+const list = el('#players');
+list.innerHTML = '';
+players.forEach(p => {
+const div = document.createElement('div'); div.className='player';
+div.innerHTML = `<span>${p.name}</span><strong>0</strong>`;
+list.appendChild(div);
+});
+});
+
+
+socket.on('progress:update', (p) => {
+el('#roundName').textContent = p.roundName;
+});
+
+
+socket.on('status', (t) => el('#status').textContent = t);
+</script>
 </body>
 </html>

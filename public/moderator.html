@@ -1,83 +1,147 @@
 <!doctype html>
-}
-function renderSongs(total, active, currentTitle){
-// Zeige N→1, active ist 0..N-1 (Server-Index)
-songList.innerHTML = '';
-for (let i = total; i >= 1; i--) {
-const idxFromTop = i - 1; // 0..N-1 von oben (Song N zuerst)
-const div = document.createElement('div');
-div.className = 'song' + (idxFromTop===active ? ' active' : '');
-const left = document.createElement('div');
-left.textContent = `Song ${i}`;
-const right = document.createElement('div');
-right.className = 'badge';
-if (idxFromTop===active && currentTitle) right.textContent = currentTitle;
-div.appendChild(left); div.appendChild(right);
-songList.appendChild(div);
-}
-}
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Musik-Quiz – Moderator</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h3 class="h">Playlists (Runden)</h3>
+      <div id="roundList" class="list"></div>
+      <div class="status"><span>Raumcode: </span><code id="roomCode" class="small">—</code></div>
+    </aside>
 
+    <main class="main">
+      <h3 class="h">Runde: <span id="roundName">–</span></h3>
+      <div class="status">Aktueller Song: <strong id="currentTitle">–</strong></div>
+      <div id="songList" class="songs"></div>
 
-// Socket Events
-socket.on('mod:room-created', ({ code, progress, playlists }) => {
-el('#roomCode').textContent = code;
-el('#roundName').textContent = progress.roundName;
-renderRounds(playlists, progress.roundIndex - 1);
-renderSongs(progress.songTotal, progress.songIndex - 1, '');
-});
+      <div class="row" style="margin-top:12px;">
+        <button id="btnCreate" class="primary">Raum erstellen</button>
+        <button id="btnStart">▶️ Start</button>
+        <button id="btnPlay">▶️ Play</button>
+        <button id="btnPause">⏸️ Pause</button>
+        <button id="btnUnlock">🔓 Buzzer freigeben</button>
+        <button id="btnNext">⏭️ Nächster Song</button>
+      </div>
 
+      <audio id="audio" controls></audio>
+      <div id="status" class="status"></div>
 
-socket.on('ui:round-update', ({ progress, playlists, activeRound, activeSong, currentTitle }) => {
-el('#roundName').textContent = progress.roundName;
-renderRounds(playlists, activeRound);
-renderSongs(progress.songTotal, activeSong, currentTitle||'');
-});
+      <div class="row" style="margin-top:10px;">
+        <button id="btnCorrect" class="ok">✅ Richtig</button>
+        <button id="btnWrong" class="err">❌ Falsch</button>
+      </div>
+    </main>
 
+    <aside class="right">
+      <h3 class="h">Spieler & Punkte</h3>
+      <div id="players" class="score"></div>
+    </aside>
+  </div>
 
-socket.on('round:prepare', ({ src, title }) => {
-audio.src = src || '';
-el('#currentTitle').textContent = title || '–';
-});
-socket.on('audio:play', () => audio.play().catch(()=>{}));
-socket.on('audio:pause', () => audio.pause());
+  <script type="module">
+    const socket = io();
+    const el = sel => document.querySelector(sel);
+    const roundList = el('#roundList');
+    const songList = el('#songList');
+    const audio = el('#audio');
 
+    el('#btnCreate').onclick = () => socket.emit('mod:create-room');
+    el('#btnStart').onclick  = () => socket.emit('mod:start-round');
+    el('#btnPlay').onclick   = () => socket.emit('mod:play');
+    el('#btnPause').onclick  = () => socket.emit('mod:pause');
+    el('#btnUnlock').onclick = () => socket.emit('mod:unlock');
+    el('#btnNext').onclick   = () => socket.emit('mod:next');
 
-socket.on('buzz:first', ({ name }) => {
-el('#status').textContent = `🔔 ${name} hat zuerst gebuzzert!`;
-});
+    el('#btnCorrect').onclick = () => socket.emit('mod:result', { type: 'correct' });
+    el('#btnWrong').onclick   = () => socket.emit('mod:result', { type: 'wrong' });
 
+    // Rendering Helpers
+    function renderRounds(playlists, activeIndex){
+      roundList.innerHTML = '';
+      playlists.forEach((pl, i) => {
+        const div = document.createElement('div');
+        div.className = 'item' + (i===activeIndex?' active':'');
+        div.textContent = pl.name || `Playlist ${i+1}`;
+        div.onclick = () => socket.emit('mod:set-round', { index: i });
+        roundList.appendChild(div);
+      });
+    }
+    function renderSongs(total, active, currentTitle){
+      // Zeige N→1, active ist 0..N-1 (Server-Index)
+      songList.innerHTML = '';
+      for (let i = total; i >= 1; i--) {
+        const idxFromTop = i - 1; // 0..N-1 von oben (Song N zuerst)
+        const div = document.createElement('div');
+        div.className = 'song' + (idxFromTop===active ? ' active' : '');
+        const left = document.createElement('div');
+        left.textContent = `Song ${i}`;
+        const right = document.createElement('div');
+        right.className = 'badge';
+        if (idxFromTop===active && currentTitle) right.textContent = currentTitle;
+        div.appendChild(left); div.appendChild(right);
+        songList.appendChild(div);
+      }
+    }
 
-socket.on('scores:update', (scores) => {
-const players = window._players || [];
-const list = el('#players');
-list.innerHTML = '';
-players.forEach(p => {
-const div = document.createElement('div');
-div.className = 'player';
-div.innerHTML = `<span>${p.name}</span><strong>${scores[p.id]||0}</strong>`;
-list.appendChild(div);
-});
-});
+    // Socket Events
+    socket.on('mod:room-created', ({ code, progress, playlists }) => {
+      el('#roomCode').textContent = code;
+      el('#roundName').textContent = progress.roundName;
+      renderRounds(playlists, progress.roundIndex - 1);
+      renderSongs(progress.songTotal, progress.songIndex - 1, '');
+    });
 
+    socket.on('ui:round-update', ({ progress, playlists, activeRound, activeSong, currentTitle }) => {
+      el('#roundName').textContent = progress.roundName;
+      renderRounds(playlists, activeRound);
+      renderSongs(progress.songTotal, activeSong, currentTitle||'');
+    });
 
-socket.on('room:update', ({ players }) => {
-window._players = players;
-const list = el('#players');
-list.innerHTML = '';
-players.forEach(p => {
-const div = document.createElement('div'); div.className='player';
-div.innerHTML = `<span>${p.name}</span><strong>0</strong>`;
-list.appendChild(div);
-});
-});
+    socket.on('round:prepare', ({ src, title }) => {
+      audio.src = src || '';
+      el('#currentTitle').textContent = title || '–';
+    });
+    socket.on('audio:play', () => audio.play().catch(()=>{}));
+    socket.on('audio:pause', () => audio.pause());
 
+    socket.on('buzz:first', ({ name }) => {
+      el('#status').textContent = `🔔 ${name} hat zuerst gebuzzert!`;
+    });
 
-socket.on('progress:update', (p) => {
-el('#roundName').textContent = p.roundName;
-});
+    socket.on('scores:update', (scores) => {
+      const players = window._players || [];
+      const list = el('#players');
+      list.innerHTML = '';
+      players.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'player';
+        div.innerHTML = `<span>${p.name}</span><strong>${scores[p.id]||0}</strong>`;
+        list.appendChild(div);
+      });
+    });
 
+    socket.on('room:update', ({ players }) => {
+      window._players = players;
+      const list = el('#players');
+      list.innerHTML = '';
+      players.forEach(p => {
+        const div = document.createElement('div'); div.className='player';
+        div.innerHTML = `<span>${p.name}</span><strong>0</strong>`;
+        list.appendChild(div);
+      });
+    });
 
-socket.on('status', (t) => el('#status').textContent = t);
-</script>
+    socket.on('progress:update', (p) => {
+      el('#roundName').textContent = p.roundName;
+    });
+
+    socket.on('status', (t) => el('#status').textContent = t);
+  </script>
 </body>
 </html>

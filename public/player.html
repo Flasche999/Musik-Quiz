@@ -31,8 +31,14 @@
         <button id="btnVoteNext">⏭️ Vote Next</button>
       </div>
 
-      <!-- Audio ohne Controls für Spieler -->
+      <!-- Audio ohne Controls für Spieler (Musik) -->
       <audio id="audio" style="display:none"></audio>
+
+      <!-- SFX: Buzzer/Correct/Wrong -->
+      <audio id="sfxBuzz"    preload="auto" src="/sfx/buzzer.mp3"  style="display:none"></audio>
+      <audio id="sfxCorrect" preload="auto" src="/sfx/correct.mp3" style="display:none"></audio>
+      <audio id="sfxWrong"   preload="auto" src="/sfx/wrong.mp3"   style="display:none"></audio>
+
       <div id="status" class="status"></div>
     </main>
 
@@ -51,6 +57,21 @@
     const songList  = el('#songList');
     const audio     = el('#audio');
 
+    // SFX
+    const sfx = {
+      buzz:    el('#sfxBuzz'),
+      correct: el('#sfxCorrect'),
+      wrong:   el('#sfxWrong')
+    };
+    function playSfx(a){
+      try {
+        if (!a) return;
+        a.pause();
+        a.currentTime = 0;
+        a.play().catch(()=>{});
+      } catch {}
+    }
+
     // Buttons/Inputs
     const btnJoin     = el('#btnJoin');
     const btnBuzz     = el('#btnBuzz');
@@ -67,10 +88,8 @@
     try {
       const saved = JSON.parse(localStorage.getItem('mq_player') || 'null');
       if (saved?.code) {
-        // Felder vorfüllen (nice to have)
         if (inpCode) inpCode.value = saved.code;
         if (inpName && saved.name) inpName.value = saved.name;
-        // dem Server sagen: ich bin wieder da
         socket.emit('player:hello', { code: saved.code, id: saved.id, name: saved.name });
       }
     } catch {}
@@ -99,6 +118,8 @@
       if (!canBuzz || btnBuzz.disabled) return;
       socket.emit('player:buzz');
       updateBuzz(false); // lokal sperren bis Server reagiert
+      // Optional: lokales Klickfeedback (leise)
+      // playSfx(sfx.buzz);
     };
     btnVoteNext.onclick = () => socket.emit('player:vote-next');
 
@@ -142,7 +163,6 @@
       const songs = el('#songList');
       const list  = el('#roundList');
 
-      // Reflow-Trick, damit die Animation jedes Mal neu startet
       [rn, songs].forEach(n => {
         if (!n) return;
         n.classList.remove('pl-switch');
@@ -150,7 +170,6 @@
         n.classList.add('pl-switch');
       });
 
-      // Sidebar: neu aktive Playlist kurz pulsieren lassen
       const active = list?.querySelector('.item.active');
       if (active){
         active.classList.add('just-activated');
@@ -166,14 +185,12 @@
       players.forEach(p => {
         const row = document.createElement('div');
         row.className = 'player';
-        // wichtig: Daten zum Matching setzen
         row.dataset.pid  = String(p.id ?? '');
         row.dataset.name = p.name ?? '';
         row.innerHTML = `<span>${p.name}</span><strong>${scores[p.id] || 0}</strong>`;
         wrap.appendChild(row);
       });
 
-      // falls schon jemand markiert ist, nach dem Re-Render wieder anwenden
       if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer);
     }
 
@@ -196,43 +213,40 @@
 
     // --- Socket Events ---
 
-    // Join-Ergebnis (verhindert Doppelbeitritt)
+    // Join-Ergebnis
     socket.on('player:join-result', (r) => {
       const st = el('#status');
       if (r.ok){
         joined = true;
         el('#roomCode') && (el('#roomCode').textContent = r.code);
         st && (st.textContent = 'Beigetreten als ' + (r.name || 'Spieler'));
-        setJoinLocked(true);      // Felder und Button sperren
-        updateBuzz(true);         // Buzz initial erlauben
-
-        // >>> Save for Auto-Resume
+        setJoinLocked(true);
+        updateBuzz(true);
         try {
           localStorage.setItem('mq_player', JSON.stringify({ code: r.code, name: r.name, id: r.id }));
         } catch {}
       } else {
         st && (st.textContent = 'Fehler: ' + r.error);
-        btnJoin.disabled = false; // erneuten Versuch erlauben
+        btnJoin.disabled = false;
       }
     });
 
-    // Runde/Anzeige aktualisieren, wenn Moderator wechselt
+    // UI / Rundenwechsel
     socket.on('ui:round-update', ({ progress, playlists, activeRound, activeSong, currentTitle }) => {
-      const was = window._lastRoundIndex; // vorherige Playlist (beim ersten Mal undefined)
+      const was = window._lastRoundIndex;
       const rn = el('#roundName');
       if (rn) rn.textContent = progress.roundName;
 
       renderRounds(playlists, activeRound);
       renderSongs(progress.songTotal, activeSong, currentTitle || '');
 
-      // Wenn sich die Playlist geändert hat → Animation starten
       if (was !== undefined && was !== activeRound) {
         playlistSwitchFX();
       }
       window._lastRoundIndex = activeRound;
     });
 
-    // Neuen Track laden + Titel setzen → Buzz freigeben
+    // Neuen Track
     socket.on('round:prepare', ({ src, title }) => {
       if (audio) audio.src = src || '';
       const ct = el('#currentTitle'); if (ct) ct.textContent = title || '–';
@@ -240,15 +254,13 @@
       const st = el('#status'); if (st) st.textContent = '';
     });
 
-    // Audio nur vom Server
+    // Musiksteuerung (nur Server)
     socket.on('audio:play', () => {
       if (!audio) return;
       allowServerPlay = true;
       audio.play().catch(()=>{}).finally(()=>{ allowServerPlay = false; });
     });
     socket.on('audio:pause', () => { if (audio) audio.pause(); });
-
-    // Blockiere manuelles Play/Pause beim Spieler
     audio?.addEventListener('play', () => { if (!allowServerPlay) audio.pause(); });
 
     // Buzz-Flow
@@ -258,7 +270,9 @@
       if (st) st.textContent = `🔔 ${name || 'Ein Spieler'} war zuerst!`;
       updateBuzz(false);
 
-      // merken + markieren
+      // SFX
+      playSfx(sfx.buzz);
+
       window._lastFirstBuzzer = (id ? { id, name } : { name });
       highlightBuzz(window._lastFirstBuzzer);
     });
@@ -268,6 +282,14 @@
       const st = el('#status'); if (st) st.textContent = '';
       clearHighlight();
       window._lastFirstBuzzer = null;
+    });
+
+    // Ergebnis-SFX
+    socket.on('result:correct', ({ name, points }) => {
+      playSfx(sfx.correct);
+    });
+    socket.on('result:wrong', ({ name }) => {
+      playSfx(sfx.wrong);
     });
 
     // Spieler- & Punkte-Updates

@@ -141,6 +141,23 @@
   // falls schon jemand markiert ist, nach dem Re-Render wieder anwenden
   if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer);
 }
+    // ── Buzz-Markierung: Zustand + Helper ───────────────────────
+window._lastFirstBuzzer = null;
+
+function highlightBuzz(by){
+  const items = document.querySelectorAll('#players .player');
+  items.forEach(div => {
+    const matchById   = by?.id   && div.dataset.pid === String(by.id);
+    const matchByName = by?.name && (div.dataset.name || div.querySelector('span')?.textContent.trim()) === by.name;
+    div.classList.toggle('buzzing', !!(matchById || matchByName));
+  });
+}
+
+function clearHighlight(){
+  document.querySelectorAll('#players .player.buzzing')
+    .forEach(div => div.classList.remove('buzzing'));
+}
+
 
 
     // --- Socket Events ---
@@ -188,11 +205,17 @@
     audio?.addEventListener('play', () => { if (!allowServerPlay) audio.pause(); });
 
     // Buzz-Flow
-    socket.on('buzz:first', ({ name }) => {
-      const st = el('#status');
-      if (st) st.textContent = `🔔 ${name} war zuerst!`;
-      updateBuzz(false);
-    });
+   socket.on('buzz:first', (payload = {}) => {
+  const { name, id } = payload;
+  const st = el('#status');
+  if (st) st.textContent = `🔔 ${name || 'Ein Spieler'} war zuerst!`;
+  updateBuzz(false);
+
+  // merken + markieren
+  window._lastFirstBuzzer = (id ? { id, name } : { name });
+  highlightBuzz(window._lastFirstBuzzer);
+});
+
     socket.on('buzz:unlock', () => {
       updateBuzz(true);
       const st = el('#status'); if (st) st.textContent = '';

@@ -71,6 +71,7 @@ function loadPlaylists() {
       return arr
         .map((pl, idx) => ({
           name: String(pl.name || pl.artist || `Playlist ${idx + 1}`),
+          solution: String(pl.solution || ''),               // <— Lösung mitnehmen
           tracks: Array.isArray(pl.tracks) ? pl.tracks.map(normalizeTrack).filter(t => t.src) : []
         }))
         .filter(pl => pl.tracks.length > 0);
@@ -81,6 +82,7 @@ function loadPlaylists() {
   // Fallback-Demo
   return [{
     name: 'Playlist 1',
+    solution: '',
     tracks: [
       { src: 'sounds/song1.mp3', title: 'Song 1' },
       { src: 'sounds/song2.mp3', title: 'Song 2' }
@@ -201,7 +203,12 @@ io.on('connection', (socket) => {
       activeSong:  room.trIndex,
       currentTitle: tr.title
     });
-    io.in(c).emit('round:prepare', { src: tr.src, title: tr.title });
+    io.in(c).emit('round:prepare', { 
+      src: tr.src, 
+      title: tr.title,
+      playlistName: room.playlists[room.plIndex]?.name,
+      solution: room.playlists[room.plIndex]?.solution || ''
+    });
     io.in(c).emit('buzz:unlock'); // Sicherheit: nach Rundenset Buzzer frei
   });
 
@@ -252,7 +259,12 @@ io.on('connection', (socket) => {
     const tr = currentTrack(room);
     io.in(c).emit('progress:update', getProgress(room));
     io.in(c).emit('next:update', { count: 0, total: room.players.length, names: [] });
-    io.in(c).emit('round:prepare', { src: tr.src, title: tr.title });
+    io.in(c).emit('round:prepare', { 
+      src: tr.src, 
+      title: tr.title,
+      playlistName: room.playlists[room.plIndex]?.name,
+      solution: room.playlists[room.plIndex]?.solution || ''
+    });
     io.in(c).emit('buzz:unlock'); // NEU: Buzzer für alle freigeben
     setTimeout(() => io.in(c).emit('audio:play'), 200);
   });
@@ -271,33 +283,33 @@ io.on('connection', (socket) => {
     const c = socket.data.room; if (!c || !rooms[c]) return;
     const room = rooms[c];
 
-    const prevPL = room.plIndex; const prevTR = room.trIndex;
+    const prevPL = room.plIndex; 
+    const prevTR = room.trIndex;
+
     if (!prevTrack(room)) {
       io.in(c).emit('status', '🎉 Alle Playlists fertig!');
       return;
     }
-    // Wenn wir von Track 1 (prevTR === 0) in die nächste Playlist gewechselt haben,
-    // setze den Namen der vorherigen Playlist auf die Lösung und update die UI.
-    if (typeof prevTR !== 'undefined' && prevTR === 0 && room.plIndex !== prevPL) {
-      try {
-        const prev = room.playlists[prevPL];
-        if (prev && prev.solution) prev.name = prev.solution;
-        io.in(c).emit('ui:round-update', {
-          progress:    getProgress(room),
-          playlists:   room.playlists,
-          activeRound: room.plIndex,
-          activeSong:  room.trIndex,
-          currentTitle: tr.title
-        });
-      } catch(e) {}
+
+    // Wenn wir von Track 1 zur nächsten Playlist gewechselt haben,
+    // setze den Namen der vorherigen Playlist auf die Lösung
+    if (prevTR === 0 && room.plIndex !== prevPL) {
+      const prev = room.playlists[prevPL];
+      if (prev && prev.solution) prev.name = prev.solution;
     }
 
     room.locked = false; room.lastBuzz = null; room.nextVotes = [];
     const tr = currentTrack(room);
+
     io.in(c).emit('progress:update', getProgress(room));
     io.in(c).emit('next:update', { count: 0, total: room.players.length, names: [] });
-    io.in(c).emit('round:prepare', { src: tr.src, title: tr.title });
-    io.in(c).emit('buzz:unlock'); // NEU: Buzzer wieder freigeben
+    io.in(c).emit('round:prepare', { 
+      src: tr.src, 
+      title: tr.title,
+      playlistName: room.playlists[room.plIndex]?.name,
+      solution: room.playlists[room.plIndex]?.solution || ''
+    });
+    io.in(c).emit('buzz:unlock');
     io.in(c).emit('ui:round-update', {
       progress:    getProgress(room),
       playlists:   room.playlists,
@@ -319,58 +331,42 @@ io.on('connection', (socket) => {
   });
 
   // Ergebnis (Punkte = aktuelle Songnummer)
-socket.on('mod:result', ({ type }) => {
-  const c = socket.data.room; if (!c || !rooms[c]) return;
-  const room = rooms[c]; const last = room.lastBuzz;
-  const points = pointsForCurrent(room);
+  socket.on('mod:result', ({ type }) => {
+    const c = socket.data.room; if (!c || !rooms[c]) return;
+    const room = rooms[c]; const last = room.lastBuzz;
+    const points = pointsForCurrent(room);
 
-  if (type === 'correct' && last) {
-    room.scores[last.id] = (room.scores[last.id] || 0) + points;
-    io.in(c).emit('result:correct', { name: last.name, points });
+    if (type === 'correct' && last) {
+      room.scores[last.id] = (room.scores[last.id] || 0) + points;
+      io.in(c).emit('result:correct', { name: last.name, points });
 
-    // Playlist als gelöst markieren (Anzeige beim Moderator ersetzen)
-    io.in(c).emit('round:solved', {
-      playlistName: room.playlists[room.plIndex]?.name,
-      solution: room.playlists[room.plIndex]?.solution || ''
-    });
-
-    // Optional serverseitig den Namen dauerhaft auf die Lösung setzen + UI refresh
-    try {
-      if (room.playlists[room.plIndex]?.solution) {
-        room.playlists[room.plIndex].name = room.playlists[room.plIndex].solution;
-        io.in(c).emit('ui:round-update', {
-          progress:    getProgress(room),
-          playlists:   room.playlists,
-          activeRound: room.plIndex,
-          activeSong:  room.trIndex,
-          currentTitle: currentTrack(room).title
-        });
-      }
-    } catch (e) {}
-
-  } else if (type === 'wrong' && last) {
-    room.players.forEach(p => {
-      if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1;
-    });
-    io.in(c).emit('result:wrong', { name: last.name });
-  }
-
-  io.in(c).emit('scores:update', room.scores);
-});
-      // Playlist als gelöst markieren (Anzeige beim Moderator ersetzen)
+      // Sidebar-Update: Playlist als gelöst melden
       io.in(c).emit('round:solved', {
         playlistName: room.playlists[room.plIndex]?.name,
         solution: room.playlists[room.plIndex]?.solution || ''
       });
+
+      // Serverseitig: Namen dauerhaft auf Lösung setzen + UI refresh
+      try {
+        if (room.playlists[room.plIndex]?.solution) {
+          room.playlists[room.plIndex].name = room.playlists[room.plIndex].solution;
+          io.in(c).emit('ui:round-update', {
+            progress:    getProgress(room),
+            playlists:   room.playlists,
+            activeRound: room.plIndex,
+            activeSong:  room.trIndex,
+            currentTitle: currentTrack(room).title
+          });
+        }
+      } catch (e) {}
+
     } else if (type === 'wrong' && last) {
-      room.players.forEach(p => { if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1; });
+      room.players.forEach(p => {
+        if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1;
+      });
       io.in(c).emit('result:wrong', { name: last.name });
     }
-    io.in(c).emit('scores:update', room.scores);
-  });} else if (type === 'wrong' && last) {
-      room.players.forEach(p => { if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1; });
-      io.in(c).emit('result:wrong', { name: last.name });
-    }
+
     io.in(c).emit('scores:update', room.scores);
   });
 

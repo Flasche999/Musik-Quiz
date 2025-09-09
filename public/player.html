@@ -125,16 +125,23 @@
 
     // Spieler- und Punkteliste rechts
     function renderPlayers(players = [], scores = {}){
-      const wrap = el('#players');
-      if (!wrap) return;
-      wrap.innerHTML = '';
-      players.forEach(p => {
-        const row = document.createElement('div');
-        row.className = 'player';
-        row.innerHTML = `<span>${p.name}</span><strong>${scores[p.id] || 0}</strong>`;
-        wrap.appendChild(row);
-      });
-    }
+  const wrap = el('#players');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  players.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'player';
+    // wichtig: Daten zum Matching setzen
+    row.dataset.pid  = String(p.id ?? '');
+    row.dataset.name = p.name ?? '';
+    row.innerHTML = `<span>${p.name}</span><strong>${scores[p.id] || 0}</strong>`;
+    wrap.appendChild(row);
+  });
+
+  // falls schon jemand markiert ist, nach dem Re-Render wieder anwenden
+  if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer);
+}
+
 
     // --- Socket Events ---
 

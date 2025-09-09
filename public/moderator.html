@@ -5,23 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Musik-Quiz – Moderator</title>
   <link rel="stylesheet" href="/style.css" />
-  <script src="/socket.io/socket.io.js">
-    socket.on('round:solved', ({ playlistName, solution }) => {
-      // Sidebar-Label ersetzen
-      replacePlaylistLabel(playlistName, solution);
-      // Wenn die Überschrift noch den alten Namen zeigt, auch ersetzen
-      const rn = document.querySelector('#roundName');
-      if (rn && rn.textContent.trim() === playlistName) rn.textContent = solution;
-    });
-
-    function replacePlaylistLabel(originalName, newLabel){
-      if (!originalName || !newLabel) return;
-      const items = Array.from(document.querySelectorAll('#roundList .item'));
-      const item = items.find(el => el.textContent.trim() === originalName);
-      if (item) item.textContent = newLabel;
-    }
-    
-  </script>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
   <div class="layout">
@@ -68,6 +52,27 @@
     const songList = el('#songList');
     const audio = el('#audio');
 
+    // ── Buzz-Markierung (Moderator) ──────────────────────────────
+    window._modLastFirstBuzzer = null;
+
+    function modHighlightBuzz(by){
+      const list = document.querySelector('#players');
+      if (!list) return;
+      list.querySelectorAll('.player').forEach(div => {
+        const nameEl = div.querySelector('span');
+        const name = nameEl ? nameEl.textContent.trim() : '';
+        const matchById   = by?.id   && div.dataset?.pid === String(by.id);
+        const matchByName = by?.name && name === by.name;
+        div.classList.toggle('buzzing', !!(matchById || matchByName));
+      });
+    }
+
+    function modClearBuzz(){
+      document.querySelectorAll('#players .player.buzzing')
+        .forEach(div => div.classList.remove('buzzing'));
+    }
+
+    // Buttons
     el('#btnCreate').onclick = () => socket.emit('mod:create-room');
     el('#btnStart').onclick  = () => socket.emit('mod:start-round');
     el('#btnPlay').onclick   = () => socket.emit('mod:play');
@@ -127,14 +132,24 @@
       window._currentPlaylistName = playlistName || null;
       const st = el('#status'); if (st) st.textContent = '';
     });
+
     socket.on('audio:play', () => audio.play().catch(()=>{}));
     socket.on('audio:pause', () => audio.pause());
 
-    socket.on('buzz:first', ({ name }) => {
-      el('#status').textContent = `🔔 ${name} hat zuerst gebuzzert!`;
+    // Buzz → markieren + merken
+    socket.on('buzz:first', (payload = {}) => {
+      const { name, id } = payload;
+      const st = el('#status');
+      if (st) st.textContent = `🔔 ${name || 'Ein Spieler'} hat zuerst gebuzzert!`;
+
+      window._modLastFirstBuzzer = (id ? { id, name } : { name });
+      modHighlightBuzz(window._modLastFirstBuzzer);
     });
 
+    // Freigabe → Markierung entfernen
     socket.on('buzz:unlock', () => {
+      modClearBuzz();
+      window._modLastFirstBuzzer = null;
       const st = el('#status'); if (st) st.textContent = '';
     });
 
@@ -145,9 +160,13 @@
       players.forEach(p => {
         const div = document.createElement('div');
         div.className = 'player';
+        // fürs Matching
+        div.dataset.pid = String(p.id ?? '');
+        div.dataset.name = p.name ?? '';
         div.innerHTML = `<span>${p.name}</span><strong>${scores[p.id]||0}</strong>`;
         list.appendChild(div);
       });
+      if (window._modLastFirstBuzzer) modHighlightBuzz(window._modLastFirstBuzzer); // Re-Apply
     });
 
     socket.on('room:update', ({ players }) => {
@@ -155,10 +174,14 @@
       const list = el('#players');
       list.innerHTML = '';
       players.forEach(p => {
-        const div = document.createElement('div'); div.className='player';
+        const div = document.createElement('div');
+        div.className='player';
+        div.dataset.pid = String(p.id ?? '');
+        div.dataset.name = p.name ?? '';
         div.innerHTML = `<span>${p.name}</span><strong>0</strong>`;
         list.appendChild(div);
       });
+      if (window._modLastFirstBuzzer) modHighlightBuzz(window._modLastFirstBuzzer); // Re-Apply
     });
 
     socket.on('progress:update', (p) => {
@@ -166,11 +189,10 @@
     });
 
     socket.on('status', (t) => el('#status').textContent = t);
-  
+
+    // Runde gelöst → Sidebar-Label ersetzen (und Überschrift ggf. auch)
     socket.on('round:solved', ({ playlistName, solution }) => {
-      // Sidebar-Label ersetzen
       replacePlaylistLabel(playlistName, solution);
-      // Wenn die Überschrift noch den alten Namen zeigt, auch ersetzen
       const rn = document.querySelector('#roundName');
       if (rn && rn.textContent.trim() === playlistName) rn.textContent = solution;
     });
@@ -181,7 +203,6 @@
       const item = items.find(el => el.textContent.trim() === originalName);
       if (item) item.textContent = newLabel;
     }
-    
   </script>
 </body>
 </html>

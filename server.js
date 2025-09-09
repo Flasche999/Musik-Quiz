@@ -319,25 +319,44 @@ io.on('connection', (socket) => {
   });
 
   // Ergebnis (Punkte = aktuelle Songnummer)
-  socket.on('mod:result', ({ type }) => {
-    const c = socket.data.room; if (!c || !rooms[c]) return;
-    const room = rooms[c]; const last = room.lastBuzz;
-    const points = pointsForCurrent(room);
+socket.on('mod:result', ({ type }) => {
+  const c = socket.data.room; if (!c || !rooms[c]) return;
+  const room = rooms[c]; const last = room.lastBuzz;
+  const points = pointsForCurrent(room);
 
-    if (type === 'correct' && last) {
-      room.scores[last.id] = (room.scores[last.id] || 0) + points;
-      io.in(c).emit('result:correct', { name: last.name, points });
-      // Playlist als gelöst markieren (Anzeige beim Moderator ersetzen)
-      io.in(c).emit('round:solved', {
-        playlistName: room.playlists[room.plIndex]?.name,
-        solution: room.playlists[room.plIndex]?.solution || ''
-      });
-    } else if (type === 'wrong' && last) {
-      room.players.forEach(p => { if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1; });
-      io.in(c).emit('result:wrong', { name: last.name });
-    }
-    io.in(c).emit('scores:update', room.scores);
-  });
+  if (type === 'correct' && last) {
+    room.scores[last.id] = (room.scores[last.id] || 0) + points;
+    io.in(c).emit('result:correct', { name: last.name, points });
+
+    // Playlist als gelöst markieren (Anzeige beim Moderator ersetzen)
+    io.in(c).emit('round:solved', {
+      playlistName: room.playlists[room.plIndex]?.name,
+      solution: room.playlists[room.plIndex]?.solution || ''
+    });
+
+    // Optional serverseitig den Namen dauerhaft auf die Lösung setzen + UI refresh
+    try {
+      if (room.playlists[room.plIndex]?.solution) {
+        room.playlists[room.plIndex].name = room.playlists[room.plIndex].solution;
+        io.in(c).emit('ui:round-update', {
+          progress:    getProgress(room),
+          playlists:   room.playlists,
+          activeRound: room.plIndex,
+          activeSong:  room.trIndex,
+          currentTitle: currentTrack(room).title
+        });
+      }
+    } catch (e) {}
+
+  } else if (type === 'wrong' && last) {
+    room.players.forEach(p => {
+      if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1;
+    });
+    io.in(c).emit('result:wrong', { name: last.name });
+  }
+
+  io.in(c).emit('scores:update', room.scores);
+});
       // Playlist als gelöst markieren (Anzeige beim Moderator ersetzen)
       io.in(c).emit('round:solved', {
         playlistName: room.playlists[room.plIndex]?.name,

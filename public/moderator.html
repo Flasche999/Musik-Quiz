@@ -5,7 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Musik-Quiz – Moderator</title>
   <link rel="stylesheet" href="/style.css" />
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="/socket.io/socket.io.js">
+    socket.on('round:solved', ({ playlistName, solution }) => {
+      // Sidebar-Label ersetzen
+      replacePlaylistLabel(playlistName, solution);
+      // Wenn die Überschrift noch den alten Namen zeigt, auch ersetzen
+      const rn = document.querySelector('#roundName');
+      if (rn && rn.textContent.trim() === playlistName) rn.textContent = solution;
+    });
+
+    function replacePlaylistLabel(originalName, newLabel){
+      if (!originalName || !newLabel) return;
+      const items = Array.from(document.querySelectorAll('#roundList .item'));
+      const item = items.find(el => el.textContent.trim() === originalName);
+      if (item) item.textContent = newLabel;
+    }
+    
+  </script>
 </head>
 <body>
   <div class="layout">
@@ -18,6 +34,7 @@
     <main class="main">
       <h3 class="h">Runde: <span id="roundName">–</span></h3>
       <div class="status">Aktueller Song: <strong id="currentTitle">–</strong></div>
+      <div id="correctBox" class="status">Richtige Antwort: <strong id="correctAnswer">–</strong></div>
       <div id="songList" class="songs"></div>
 
       <div class="row" style="margin-top:12px;">
@@ -103,9 +120,12 @@
       renderSongs(progress.songTotal, activeSong, currentTitle||'');
     });
 
-    socket.on('round:prepare', ({ src, title }) => {
+    socket.on('round:prepare', ({ src, title, playlistName, solution }) => {
       audio.src = src || '';
       el('#currentTitle').textContent = title || '–';
+      const ca = document.querySelector('#correctAnswer'); if (ca) ca.textContent = solution || '–';
+      window._currentPlaylistName = playlistName || null;
+      const st = el('#status'); if (st) st.textContent = '';
     });
     socket.on('audio:play', () => audio.play().catch(()=>{}));
     socket.on('audio:pause', () => audio.pause());
@@ -114,20 +134,9 @@
       el('#status').textContent = `🔔 ${name} hat zuerst gebuzzert!`;
     });
 
-    // Buzzer freigeben → Status zurücksetzen
     socket.on('buzz:unlock', () => {
-     const st = el('#status');
-     if (st) st.textContent = '';
+      const st = el('#status'); if (st) st.textContent = '';
     });
-
-   // Neue Runde vorbereiten → alten Status löschen
-    socket.on('round:prepare', ({ src, title }) => {
-    audio.src = src || '';
-     el('#currentTitle').textContent = title || '–';
-     const st = el('#status');
-     if (st) st.textContent = '';
-    });
-
 
     socket.on('scores:update', (scores) => {
       const players = window._players || [];
@@ -157,6 +166,22 @@
     });
 
     socket.on('status', (t) => el('#status').textContent = t);
+  
+    socket.on('round:solved', ({ playlistName, solution }) => {
+      // Sidebar-Label ersetzen
+      replacePlaylistLabel(playlistName, solution);
+      // Wenn die Überschrift noch den alten Namen zeigt, auch ersetzen
+      const rn = document.querySelector('#roundName');
+      if (rn && rn.textContent.trim() === playlistName) rn.textContent = solution;
+    });
+
+    function replacePlaylistLabel(originalName, newLabel){
+      if (!originalName || !newLabel) return;
+      const items = Array.from(document.querySelectorAll('#roundList .item'));
+      const item = items.find(el => el.textContent.trim() === originalName);
+      if (item) item.textContent = newLabel;
+    }
+    
   </script>
 </body>
 </html>

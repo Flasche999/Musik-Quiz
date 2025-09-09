@@ -49,8 +49,8 @@
     const socket = io();
     const el = sel => document.querySelector(sel);
     const roundList = el('#roundList');
-    const songList = el('#songList');
-    const audio = el('#audio');
+    const songList  = el('#songList');
+    const audio     = el('#audio');
 
     // ── Buzz-Markierung (Moderator) ──────────────────────────────
     window._modLastFirstBuzzer = null;
@@ -66,7 +66,6 @@
         div.classList.toggle('buzzing', !!(matchById || matchByName));
       });
     }
-
     function modClearBuzz(){
       document.querySelectorAll('#players .player.buzzing')
         .forEach(div => div.classList.remove('buzzing'));
@@ -88,20 +87,19 @@
       roundList.innerHTML = '';
       playlists.forEach((pl, i) => {
         const div = document.createElement('div');
-        div.className = 'item' + (i===activeIndex?' active':'');
+        div.className   = 'item' + (i===activeIndex ? ' active' : '');
         div.textContent = pl.name || `Playlist ${i+1}`;
-        div.onclick = () => socket.emit('mod:set-round', { index: i });
+        div.onclick     = () => socket.emit('mod:set-round', { index: i });
         roundList.appendChild(div);
       });
     }
     function renderSongs(total, active, currentTitle){
-      // Zeige N→1, active ist 0..N-1 (Server-Index)
       songList.innerHTML = '';
       for (let i = total; i >= 1; i--) {
-        const idxFromTop = i - 1; // 0..N-1 von oben (Song N zuerst)
-        const div = document.createElement('div');
+        const idxFromTop = i - 1; // 0..N-1
+        const div  = document.createElement('div');
         div.className = 'song' + (idxFromTop===active ? ' active' : '');
-        const left = document.createElement('div');
+        const left  = document.createElement('div');
         left.textContent = `Song ${i}`;
         const right = document.createElement('div');
         right.className = 'badge';
@@ -111,7 +109,40 @@
       }
     }
 
-    // Socket Events
+    // ── Spielerliste rendern (mit +/–) ──────────────────────────
+    function renderPlayersWithScores(players = [], scores = {}){
+      const list = el('#players');
+      list.innerHTML = '';
+      players.forEach(p => {
+        const score = scores[p.id] || 0;
+        const div = document.createElement('div');
+        div.className   = 'player';
+        div.dataset.pid = String(p.id ?? '');
+        div.dataset.name = p.name ?? '';
+        div.innerHTML = `
+          <span>${p.name}</span>
+          <strong>${score}</strong>
+          <div class="pm">
+            <button class="score-btn minus" data-delta="-1" data-pid="${p.id}">−</button>
+            <button class="score-btn plus"  data-delta="1"  data-pid="${p.id}">+</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+      if (window._modLastFirstBuzzer) modHighlightBuzz(window._modLastFirstBuzzer); // Re-Apply Markierung
+    }
+
+    // Klick-Handler für +/–
+    el('#players').addEventListener('click', (e) => {
+      const btn = e.target.closest('.score-btn');
+      if (!btn) return;
+      const pid   = btn.dataset.pid;
+      const delta = parseInt(btn.dataset.delta, 10) || 0;
+      if (!pid || !delta) return;
+      socket.emit('mod:score-delta', { playerId: pid, delta });
+    });
+
+    // ── Socket Events ───────────────────────────────────────────
     socket.on('mod:room-created', ({ code, progress, playlists }) => {
       el('#roomCode').textContent = code;
       el('#roundName').textContent = progress.roundName;
@@ -133,7 +164,7 @@
       const st = el('#status'); if (st) st.textContent = '';
     });
 
-    socket.on('audio:play', () => audio.play().catch(()=>{}));
+    socket.on('audio:play',  () => audio.play().catch(()=>{}));
     socket.on('audio:pause', () => audio.pause());
 
     // Buzz → markieren + merken
@@ -141,7 +172,6 @@
       const { name, id } = payload;
       const st = el('#status');
       if (st) st.textContent = `🔔 ${name || 'Ein Spieler'} hat zuerst gebuzzert!`;
-
       window._modLastFirstBuzzer = (id ? { id, name } : { name });
       modHighlightBuzz(window._modLastFirstBuzzer);
     });
@@ -153,35 +183,16 @@
       const st = el('#status'); if (st) st.textContent = '';
     });
 
+    // Punkte-Update
     socket.on('scores:update', (scores) => {
       const players = window._players || [];
-      const list = el('#players');
-      list.innerHTML = '';
-      players.forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'player';
-        // fürs Matching
-        div.dataset.pid = String(p.id ?? '');
-        div.dataset.name = p.name ?? '';
-        div.innerHTML = `<span>${p.name}</span><strong>${scores[p.id]||0}</strong>`;
-        list.appendChild(div);
-      });
-      if (window._modLastFirstBuzzer) modHighlightBuzz(window._modLastFirstBuzzer); // Re-Apply
+      renderPlayersWithScores(players, scores || {});
     });
 
-    socket.on('room:update', ({ players }) => {
+    // Spieler-Update
+    socket.on('room:update', ({ players, scores }) => {
       window._players = players;
-      const list = el('#players');
-      list.innerHTML = '';
-      players.forEach(p => {
-        const div = document.createElement('div');
-        div.className='player';
-        div.dataset.pid = String(p.id ?? '');
-        div.dataset.name = p.name ?? '';
-        div.innerHTML = `<span>${p.name}</span><strong>0</strong>`;
-        list.appendChild(div);
-      });
-      if (window._modLastFirstBuzzer) modHighlightBuzz(window._modLastFirstBuzzer); // Re-Apply
+      renderPlayersWithScores(players, scores || {});
     });
 
     socket.on('progress:update', (p) => {

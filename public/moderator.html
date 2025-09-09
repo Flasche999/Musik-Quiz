@@ -21,17 +21,23 @@
       <div id="correctBox" class="status">Richtige Antwort: <strong id="correctAnswer">–</strong></div>
       <div id="songList" class="songs"></div>
 
-      <div class="row" style="margin-top:12px; gap:8px; flex-wrap:wrap;">
+      <div class="row" style="margin-top:12px;">
         <button id="btnCreate" class="primary">Raum erstellen</button>
         <button id="btnStart">▶️ Start</button>
         <button id="btnPlay">▶️ Play</button>
         <button id="btnPause">⏸️ Pause</button>
         <button id="btnUnlock">🔓 Buzzer freigeben</button>
         <button id="btnNext">⏭️ Nächster Song</button>
-        <button id="btnRefresh">🔄 Seiten neu laden</button>
       </div>
 
+      <!-- Musik-Player -->
       <audio id="audio" controls></audio>
+
+      <!-- SFX: Buzzer/Correct/Wrong (Moderator hört auch Sounds) -->
+      <audio id="sfxBuzz"    preload="auto" src="/sfx/buzzer.mp3"  style="display:none"></audio>
+      <audio id="sfxCorrect" preload="auto" src="/sfx/correct.mp3" style="display:none"></audio>
+      <audio id="sfxWrong"   preload="auto" src="/sfx/wrong.mp3"   style="display:none"></audio>
+
       <div id="status" class="status"></div>
 
       <div class="row" style="margin-top:10px;">
@@ -53,14 +59,20 @@
     const songList  = el('#songList');
     const audio     = el('#audio');
 
-    // --- Auto-Resume des Moderators nach Reload -----------------
-    try {
-      const savedMod = JSON.parse(localStorage.getItem('mq_mod') || 'null');
-      if (savedMod?.code) socket.emit('mod:hello', { code: savedMod.code });
-    } catch {}
-
-    // Serverseitiger Reload-Befehl
-    socket.on('ui:refresh', () => { location.reload(); });
+    // SFX
+    const sfx = {
+      buzz:    el('#sfxBuzz'),
+      correct: el('#sfxCorrect'),
+      wrong:   el('#sfxWrong')
+    };
+    function playSfx(a){
+      try {
+        if (!a) return;
+        a.pause();
+        a.currentTime = 0;
+        a.play().catch(()=>{});
+      } catch {}
+    }
 
     // ── Buzz-Markierung (Moderator) ──────────────────────────────
     window._modLastFirstBuzzer = null;
@@ -108,7 +120,6 @@
     el('#btnPause').onclick  = () => socket.emit('mod:pause');
     el('#btnUnlock').onclick = () => socket.emit('mod:unlock');
     el('#btnNext').onclick   = () => socket.emit('mod:next');
-    el('#btnRefresh').onclick = () => socket.emit('mod:refresh');
 
     el('#btnCorrect').onclick = () => socket.emit('mod:result', { type: 'correct' });
     el('#btnWrong').onclick   = () => socket.emit('mod:result', { type: 'wrong' });
@@ -160,7 +171,7 @@
         `;
         list.appendChild(div);
       });
-      if (window._modLastFirstBuzzer) modHighlightBuzz(window._modLastFirstBuzzer); // Re-Apply Markierung
+      if (window._modLastFirstBuzzer) modHighlightBuzz(window._modLastFirstBuzzer);
     }
 
     // Klick-Handler für +/–
@@ -179,11 +190,7 @@
       el('#roundName').textContent = progress.roundName;
       renderRounds(playlists, progress.roundIndex - 1);
       renderSongs(progress.songTotal, progress.songIndex - 1, '');
-      // Initialindex merken, damit der erste ui:round-update nicht animiert
       window._modLastRoundIndex = progress.roundIndex - 1;
-
-      // Raumcode im LocalStorage merken (für Auto-Resume)
-      try { localStorage.setItem('mq_mod', JSON.stringify({ code })); } catch {}
     });
 
     socket.on('ui:round-update', ({ progress, playlists, activeRound, activeSong, currentTitle }) => {
@@ -206,17 +213,19 @@
       window._currentPlaylistName = playlistName || null;
       const st = el('#status'); if (st) st.textContent = '';
     });
-
     socket.on('audio:play',  () => audio.play().catch(()=>{}));
     socket.on('audio:pause', () => audio.pause());
 
-    // Buzz → markieren + merken
+    // Buzz → markieren + Sound
     socket.on('buzz:first', (payload = {}) => {
       const { name, id } = payload;
       const st = el('#status');
       if (st) st.textContent = `🔔 ${name || 'Ein Spieler'} hat zuerst gebuzzert!`;
       window._modLastFirstBuzzer = (id ? { id, name } : { name });
       modHighlightBuzz(window._modLastFirstBuzzer);
+
+      // SFX
+      playSfx(sfx.buzz);
     });
 
     // Freigabe → Markierung entfernen
@@ -224,6 +233,14 @@
       modClearBuzz();
       window._modLastFirstBuzzer = null;
       const st = el('#status'); if (st) st.textContent = '';
+    });
+
+    // Ergebnis-SFX
+    socket.on('result:correct', ({ name, points }) => {
+      playSfx(sfx.correct);
+    });
+    socket.on('result:wrong', ({ name }) => {
+      playSfx(sfx.wrong);
     });
 
     // Punkte-Update

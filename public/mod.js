@@ -13,6 +13,24 @@ const firstBanner = $('#firstBanner');
 const resultBanner = $('#resultBanner');
 const music = $('#music');
 
+// --- Buzz-Markierung (Moderator-Seite) ---
+// Sucht in der rechten Score-Liste (#scoreRows) alle .player-Zeilen.
+// Markiert die Zeile, deren Name mit payload.name übereinstimmt.
+function highlightBuzz(by){
+  const rows = document.querySelectorAll('#scoreRows .player');
+  rows.forEach(row => {
+    // Spielername steht meist in einem <span> links
+    const nameEl = row.querySelector('span');
+    const name = nameEl ? nameEl.textContent.trim() : '';
+    row.classList.toggle('buzzing', !!(by?.name && name === by.name));
+  });
+}
+function clearBuzzHighlight(){
+  document.querySelectorAll('#scoreRows .player.buzzing')
+    .forEach(row => row.classList.remove('buzzing'));
+}
+
+
 $('#createRoom').addEventListener('click', () => socket.emit('mod:create-room'));
 
 socket.on('mod:room-created', ({code, state, progress}) => {
@@ -62,6 +80,21 @@ socket.on('result:wrong', ({name}) => {
   resultBanner.textContent = `❌ Falsch: ${name} (alle anderen +1)`;
   resultBanner.className = 'banner bad';
 });
+
+// Wer war zuerst? -> Markieren
+socket.on('buzz:first', (payload) => {
+  // payload z.B.: { name: "Dennis" }
+  highlightBuzz(payload || {});
+  // Optional Status setzen, falls vorhanden:
+  if (statusEl) statusEl.textContent = `🔔 ${payload?.name || 'Ein Spieler'} hat zuerst gebuzzert!`;
+});
+
+// Moderator gibt Buzzer frei -> Markierung entfernen
+socket.on('buzz:unlock', () => {
+  clearBuzzHighlight();
+  if (statusEl) statusEl.textContent = '';
+});
+
 
 socket.on('next:update', ({count, total, names}) => {
   nextSummary.textContent = `Weiter geklickt: ${count}/${total} — ${names.join(', ')}`;

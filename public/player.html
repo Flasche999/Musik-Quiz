@@ -123,42 +123,63 @@
       }
     }
 
+    // ── FX: Animation beim Playlist-Wechsel ──────────────────────
+    function playlistSwitchFX(){
+      const rn    = el('#roundName');
+      const songs = el('#songList');
+      const list  = el('#roundList');
+
+      // Reflow-Trick, damit die Animation jedes Mal neu startet
+      [rn, songs].forEach(n => {
+        if (!n) return;
+        n.classList.remove('pl-switch');
+        void n.offsetWidth;
+        n.classList.add('pl-switch');
+      });
+
+      // Sidebar: neu aktive Playlist kurz pulsieren lassen
+      const active = list?.querySelector('.item.active');
+      if (active){
+        active.classList.add('just-activated');
+        setTimeout(() => active.classList.remove('just-activated'), 900);
+      }
+    }
+
     // Spieler- und Punkteliste rechts
     function renderPlayers(players = [], scores = {}){
-  const wrap = el('#players');
-  if (!wrap) return;
-  wrap.innerHTML = '';
-  players.forEach(p => {
-    const row = document.createElement('div');
-    row.className = 'player';
-    // wichtig: Daten zum Matching setzen
-    row.dataset.pid  = String(p.id ?? '');
-    row.dataset.name = p.name ?? '';
-    row.innerHTML = `<span>${p.name}</span><strong>${scores[p.id] || 0}</strong>`;
-    wrap.appendChild(row);
-  });
+      const wrap = el('#players');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      players.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'player';
+        // wichtig: Daten zum Matching setzen
+        row.dataset.pid  = String(p.id ?? '');
+        row.dataset.name = p.name ?? '';
+        row.innerHTML = `<span>${p.name}</span><strong>${scores[p.id] || 0}</strong>`;
+        wrap.appendChild(row);
+      });
 
-  // falls schon jemand markiert ist, nach dem Re-Render wieder anwenden
-  if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer);
-}
+      // falls schon jemand markiert ist, nach dem Re-Render wieder anwenden
+      if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer);
+    }
+
     // ── Buzz-Markierung: Zustand + Helper ───────────────────────
-window._lastFirstBuzzer = null;
+    window._lastFirstBuzzer = null;
 
-function highlightBuzz(by){
-  const items = document.querySelectorAll('#players .player');
-  items.forEach(div => {
-    const matchById   = by?.id   && div.dataset.pid === String(by.id);
-    const matchByName = by?.name && (div.dataset.name || div.querySelector('span')?.textContent.trim()) === by.name;
-    div.classList.toggle('buzzing', !!(matchById || matchByName));
-  });
-}
+    function highlightBuzz(by){
+      const items = document.querySelectorAll('#players .player');
+      items.forEach(div => {
+        const matchById   = by?.id   && div.dataset.pid === String(by.id);
+        const matchByName = by?.name && (div.dataset.name || div.querySelector('span')?.textContent.trim()) === by.name;
+        div.classList.toggle('buzzing', !!(matchById || matchByName));
+      });
+    }
 
-function clearHighlight(){
-  document.querySelectorAll('#players .player.buzzing')
-    .forEach(div => div.classList.remove('buzzing'));
-}
-
-
+    function clearHighlight(){
+      document.querySelectorAll('#players .player.buzzing')
+        .forEach(div => div.classList.remove('buzzing'));
+    }
 
     // --- Socket Events ---
 
@@ -179,10 +200,18 @@ function clearHighlight(){
 
     // Runde/Anzeige aktualisieren, wenn Moderator wechselt
     socket.on('ui:round-update', ({ progress, playlists, activeRound, activeSong, currentTitle }) => {
+      const was = window._lastRoundIndex; // vorherige Playlist (beim ersten Mal undefined)
       const rn = el('#roundName');
       if (rn) rn.textContent = progress.roundName;
+
       renderRounds(playlists, activeRound);
       renderSongs(progress.songTotal, activeSong, currentTitle || '');
+
+      // Wenn sich die Playlist geändert hat → Animation starten
+      if (was !== undefined && was !== activeRound) {
+        playlistSwitchFX();
+      }
+      window._lastRoundIndex = activeRound;
     });
 
     // Neuen Track laden + Titel setzen → Buzz freigeben
@@ -205,37 +234,34 @@ function clearHighlight(){
     audio?.addEventListener('play', () => { if (!allowServerPlay) audio.pause(); });
 
     // Buzz-Flow
-   socket.on('buzz:first', (payload = {}) => {
-  const { name, id } = payload;
-  const st = el('#status');
-  if (st) st.textContent = `🔔 ${name || 'Ein Spieler'} war zuerst!`;
-  updateBuzz(false);
+    socket.on('buzz:first', (payload = {}) => {
+      const { name, id } = payload;
+      const st = el('#status');
+      if (st) st.textContent = `🔔 ${name || 'Ein Spieler'} war zuerst!`;
+      updateBuzz(false);
 
-  // merken + markieren
-  window._lastFirstBuzzer = (id ? { id, name } : { name });
-  highlightBuzz(window._lastFirstBuzzer);
-});
+      // merken + markieren
+      window._lastFirstBuzzer = (id ? { id, name } : { name });
+      highlightBuzz(window._lastFirstBuzzer);
+    });
 
     socket.on('buzz:unlock', () => {
-  updateBuzz(true);
-  const st = el('#status'); if (st) st.textContent = '';
-  clearHighlight();
-  window._lastFirstBuzzer = null;
-});
-
+      updateBuzz(true);
+      const st = el('#status'); if (st) st.textContent = '';
+      clearHighlight();
+      window._lastFirstBuzzer = null;
+    });
 
     // Spieler- & Punkte-Updates
     socket.on('room:update', ({ players, scores }) => {
-  window._players = players;
-  renderPlayers(players, scores || {});
-  if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer); // <— NEU
-});
-
+      window._players = players;
+      renderPlayers(players, scores || {});
+      if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer);
+    });
     socket.on('scores:update', (scores) => {
-  renderPlayers(window._players || [], scores || {});
-  if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer); // <— NEU
-});
-
+      renderPlayers(window._players || [], scores || {});
+      if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer);
+    });
 
     // Nur Rundennamen refreshen (optional)
     socket.on('progress:update', (p) => {

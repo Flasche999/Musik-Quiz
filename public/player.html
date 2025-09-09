@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Musik-Quiz – Spieler</title>
   <link rel="stylesheet" href="/style.css" />
-  <!-- Socket.IO muss vor deinem Script geladen werden -->
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -17,7 +16,7 @@
       <div class="status">Du bist in Raum <code id="roomCode" class="small">—</code></div>
     </aside>
 
-    <!-- Mitte: Songs & Steuerung -->
+    <!-- Mitte: Songs -->
     <main class="main">
       <h3 class="h">Runde: <span id="roundName">–</span></h3>
       <div class="status">Aktueller Song: <strong id="currentTitle">–</strong></div>
@@ -32,7 +31,8 @@
         <button id="btnVoteNext">⏭️ Vote Next</button>
       </div>
 
-      <audio id="audio" controls></audio>
+      <!-- Audio ohne Controls für Spieler -->
+      <audio id="audio" style="display:none"></audio>
       <div id="status" class="status"></div>
     </main>
 
@@ -51,18 +51,42 @@
     const songList  = el('#songList');
     const audio     = el('#audio');
 
-    // Buttons
+    // Buttons/Inputs
     const btnJoin     = el('#btnJoin');
     const btnBuzz     = el('#btnBuzz');
     const btnVoteNext = el('#btnVoteNext');
-
-    // Inputs
     const inpCode = el('#inpCode');
     const inpName = el('#inpName');
 
+    // State
+    let joined  = false;
+    let canBuzz = false;   // erst aktiv, wenn Runde/Unlock kommt
+    let allowServerPlay = false; // verhindert manuelles Play
+
+    // UI Helpers
+    function setJoinLocked(locked) {
+      inpCode.disabled = locked;
+      inpName.disabled = locked;
+      btnJoin.disabled = locked;
+      if (locked) btnJoin.textContent = 'Beigetreten';
+    }
+    function updateBuzz(enabled) {
+      canBuzz = !!enabled;
+      btnBuzz.disabled = !enabled;
+      btnBuzz.classList.toggle('disabled', !enabled);
+    }
+
     // Aktionen
-    btnJoin.onclick     = () => socket.emit('player:join', { code: inpCode.value, name: inpName.value });
-    btnBuzz.onclick     = () => socket.emit('player:buzz');
+    btnJoin.onclick = () => {
+      if (joined || btnJoin.disabled) return;
+      btnJoin.disabled = true; // gegen Doppelklick
+      socket.emit('player:join', { code: inpCode.value, name: inpName.value });
+    };
+    btnBuzz.onclick = () => {
+      if (!canBuzz || btnBuzz.disabled) return;
+      socket.emit('player:buzz');
+      updateBuzz(false); // lokal sperren bis Server reagiert
+    };
     btnVoteNext.onclick = () => socket.emit('player:vote-next');
 
     // Runden links rendern
@@ -114,14 +138,18 @@
 
     // --- Socket Events ---
 
-    // Join-Ergebnis
+    // Join-Ergebnis (verhindert Doppelbeitritt)
     socket.on('player:join-result', (r) => {
       const st = el('#status');
       if (r.ok){
+        joined = true;
         el('#roomCode') && (el('#roomCode').textContent = r.code);
         st && (st.textContent = 'Beigetreten als ' + r.name);
+        setJoinLocked(true);      // Felder und Button sperren
+        updateBuzz(true);         // Buzz initial erlauben
       } else {
         st && (st.textContent = 'Fehler: ' + r.error);
+        btnJoin.disabled = false; // erneuten Versuch erlauben
       }
     });
 
@@ -133,21 +161,33 @@
       renderSongs(progress.songTotal, activeSong, currentTitle || '');
     });
 
-    // Neuen Track laden + Titel setzen
+    // Neuen Track laden + Titel setzen → Buzz freigeben
     socket.on('round:prepare', ({ src, title }) => {
       if (audio) audio.src = src || '';
       const ct = el('#currentTitle');
       if (ct) ct.textContent = title || '–';
+      updateBuzz(true); // bei neuem Track wieder freigeben
     });
 
-    // Audio steuern
-    socket.on('audio:play', () => { try { audio && audio.play(); } catch(e){} });
-    socket.on('audio:pause', () => { try { audio && audio.pause(); } catch(e){} });
+    // Audio nur vom Server
+    socket.on('audio:play', () => {
+      if (!audio) return;
+      allowServerPlay = true;
+      audio.play().catch(()=>{}).finally(()=>{ allowServerPlay = false; });
+    });
+    socket.on('audio:pause', () => { if (audio) audio.pause(); });
 
-    // Buzz-Hinweis
+    // Blockiere manuelles Play/Pause beim Spieler
+    audio?.addEventListener('play', () => { if (!allowServerPlay) audio.pause(); });
+
+    // Buzz-Flow
     socket.on('buzz:first', ({ name }) => {
       const st = el('#status');
       if (st) st.textContent = `🔔 ${name} war zuerst!`;
+      updateBuzz(false);
+    });
+    socket.on('buzz:unlock', () => {
+      updateBuzz(true);
     });
 
     // Spieler- & Punkte-Updates
@@ -155,7 +195,6 @@
       window._players = players;
       renderPlayers(players, scores || {});
     });
-
     socket.on('scores:update', (scores) => {
       renderPlayers(window._players || [], scores || {});
     });

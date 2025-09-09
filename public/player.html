@@ -186,9 +186,24 @@
       if (st) st.textContent = `🔔 ${name} war zuerst!`;
       updateBuzz(false);
     });
-    socket.on('buzz:unlock', () => {
-      updateBuzz(true);
+   // Buzzer freigeben → Status zurücksetzen
+     socket.on('buzz:unlock', () => {
+     updateBuzz(true);
+     const st = el('#status');
+     if (st) st.textContent = '';
     });
+
+// Neue Runde vorbereiten → alten Status löschen
+socket.on('round:prepare', ({ src, title }) => {
+  if (audio) audio.src = src || '';
+  const ct = el('#currentTitle');
+  if (ct) ct.textContent = title || '–';
+  updateBuzz(true);
+
+  const st = el('#status');
+  if (st) st.textContent = '';
+});
+
 
     // Spieler- & Punkte-Updates
     socket.on('room:update', ({ players, scores }) => {

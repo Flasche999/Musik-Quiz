@@ -114,6 +114,21 @@
       el('#status').textContent = `🔔 ${name} hat zuerst gebuzzert!`;
     });
 
+    // Buzzer freigeben → Status zurücksetzen
+    socket.on('buzz:unlock', () => {
+     const st = el('#status');
+     if (st) st.textContent = '';
+    });
+
+   // Neue Runde vorbereiten → alten Status löschen
+    socket.on('round:prepare', ({ src, title }) => {
+    audio.src = src || '';
+     el('#currentTitle').textContent = title || '–';
+     const st = el('#status');
+     if (st) st.textContent = '';
+    });
+
+
     socket.on('scores:update', (scores) => {
       const players = window._players || [];
       const list = el('#players');

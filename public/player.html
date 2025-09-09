@@ -164,9 +164,9 @@
     // Neuen Track laden + Titel setzen → Buzz freigeben
     socket.on('round:prepare', ({ src, title }) => {
       if (audio) audio.src = src || '';
-      const ct = el('#currentTitle');
-      if (ct) ct.textContent = title || '–';
-      updateBuzz(true); // bei neuem Track wieder freigeben
+      const ct = el('#currentTitle'); if (ct) ct.textContent = title || '–';
+      updateBuzz(true);
+      const st = el('#status'); if (st) st.textContent = '';
     });
 
     // Audio nur vom Server
@@ -188,6 +188,7 @@
     });
     socket.on('buzz:unlock', () => {
       updateBuzz(true);
+      const st = el('#status'); if (st) st.textContent = '';
     });
 
     // Spieler- & Punkte-Updates

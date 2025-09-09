@@ -21,13 +21,14 @@
       <div id="correctBox" class="status">Richtige Antwort: <strong id="correctAnswer">–</strong></div>
       <div id="songList" class="songs"></div>
 
-      <div class="row" style="margin-top:12px;">
+      <div class="row" style="margin-top:12px; gap:8px; flex-wrap:wrap;">
         <button id="btnCreate" class="primary">Raum erstellen</button>
         <button id="btnStart">▶️ Start</button>
         <button id="btnPlay">▶️ Play</button>
         <button id="btnPause">⏸️ Pause</button>
         <button id="btnUnlock">🔓 Buzzer freigeben</button>
         <button id="btnNext">⏭️ Nächster Song</button>
+        <button id="btnRefresh">🔄 Seiten neu laden</button>
       </div>
 
       <audio id="audio" controls></audio>
@@ -51,6 +52,15 @@
     const roundList = el('#roundList');
     const songList  = el('#songList');
     const audio     = el('#audio');
+
+    // --- Auto-Resume des Moderators nach Reload -----------------
+    try {
+      const savedMod = JSON.parse(localStorage.getItem('mq_mod') || 'null');
+      if (savedMod?.code) socket.emit('mod:hello', { code: savedMod.code });
+    } catch {}
+
+    // Serverseitiger Reload-Befehl
+    socket.on('ui:refresh', () => { location.reload(); });
 
     // ── Buzz-Markierung (Moderator) ──────────────────────────────
     window._modLastFirstBuzzer = null;
@@ -98,6 +108,7 @@
     el('#btnPause').onclick  = () => socket.emit('mod:pause');
     el('#btnUnlock').onclick = () => socket.emit('mod:unlock');
     el('#btnNext').onclick   = () => socket.emit('mod:next');
+    el('#btnRefresh').onclick = () => socket.emit('mod:refresh');
 
     el('#btnCorrect').onclick = () => socket.emit('mod:result', { type: 'correct' });
     el('#btnWrong').onclick   = () => socket.emit('mod:result', { type: 'wrong' });
@@ -170,6 +181,9 @@
       renderSongs(progress.songTotal, progress.songIndex - 1, '');
       // Initialindex merken, damit der erste ui:round-update nicht animiert
       window._modLastRoundIndex = progress.roundIndex - 1;
+
+      // Raumcode im LocalStorage merken (für Auto-Resume)
+      try { localStorage.setItem('mq_mod', JSON.stringify({ code })); } catch {}
     });
 
     socket.on('ui:round-update', ({ progress, playlists, activeRound, activeSong, currentTitle }) => {

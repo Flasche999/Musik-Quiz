@@ -47,6 +47,8 @@ app.get('/moderator.html', (_req, res) => safeSend('moderator.html', res, 'Fehle
 app.get('/player.html',    (_req, res) => safeSend('player.html',    res, 'Fehler: public/player.html fehlt.'));
 
 // ─────────────────────────────────────────────────────────────
+// Playlists laden (Strings oder {src,title} unterstützt)
+// ─────────────────────────────────────────────────────────────
 function normalizeTrack(t) {
   if (typeof t === 'string') {
     const name = t.split('/').pop().replace(/\.[^/.]+$/, '');
@@ -97,6 +99,10 @@ const rooms = {};
 const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 32 Zeichen (ohne I/O/1/0)
 const genCode = () => Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 
+// persistente Player-IDs (pid) – unabhängig von Socket-ID (sid)
+const pidChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const genPid = () => Array.from({ length: 8 }, () => pidChars[Math.floor(Math.random() * pidChars.length)]).join('');
+
 function getProgress(room) {
   const totalPL = room.playlists.length;
   const curPL   = room.playlists[room.plIndex] || { tracks: [] };
@@ -132,7 +138,7 @@ const currentTrack     = (room) => room.playlists[room.plIndex]?.tracks[room.trI
 const pointsForCurrent = (room) => room.trIndex + 1; // Punkte = Songnummer (N..1)
 
 function voterNames(room) {
-  const ids = new Set(room.nextVotes || []);
+  const ids = new Set(room.nextVotes || []); // enthält jetzt pids
   return room.players.filter(p => ids.has(p.id)).map(p => p.name);
 }
 function broadcastVotes(code) {
@@ -152,14 +158,15 @@ io.on('connection', (socket) => {
 
     rooms[code] = {
       moderatorId: socket.id,
-      players:     [],
+      players:     [],          // { id: pid, sid: socket.id|null, name }
       locked:      false,
-      lastBuzz:    null,
+      lastBuzz:    null,        // { id, name } (pid)
       playlists:   loadPlaylists(),
       plIndex:     0,
       trIndex:     0,
-      scores:      {},
-      nextVotes:   [],
+      scores:      {},          // key = pid
+      nextVotes:   [],          // pids
+      refreshing:  false        // während Refresh niemand entfernen
     };
     setRound(rooms[code], 0); // Runde 1, Song N
 
@@ -210,7 +217,7 @@ io.on('connection', (socket) => {
     io.in(c).emit('buzz:unlock'); // Sicherheit: nach Rundenset Buzzer frei
   });
 
-  // Spieler joint (Doppelbeitritt verhindern)
+  // Spieler joint (Doppelbeitritt verhindern) – vergibt PID
   socket.on('player:join', ({ code, name }) => {
     code = (code || '').toUpperCase().trim();
     if (!rooms[code]) {
@@ -219,25 +226,25 @@ io.on('connection', (socket) => {
 
     const room = rooms[code];
 
-    // Schon drin? -> nicht doppelt hinzufügen
-    const existing = room.players.find(p => p.id === socket.id);
-    if (existing) {
-      return io.to(socket.id).emit('player:join-result', { ok: true, code, name: existing.name });
+    // Schon drin mit gleicher SID? -> nur bestätigen
+    const existsBySid = room.players.find(p => p.sid === socket.id);
+    if (existsBySid) {
+      return io.to(socket.id).emit('player:join-result', { ok: true, code, name: existsBySid.name, id: existsBySid.id });
     }
 
     if (room.players.length >= 6) {
       return io.to(socket.id).emit('player:join-result', { ok:false, error:'Raum ist voll (max. 6).' });
     }
 
-    const player = { id: socket.id, name: String(name || 'Spieler').slice(0, 24) };
+    const player = { id: genPid(), sid: socket.id, name: String(name || 'Spieler').slice(0, 24) };
     room.players.push(player);
-    if (!(socket.id in room.scores)) room.scores[socket.id] = 0;
+    if (!(player.id in room.scores)) room.scores[player.id] = 0;
 
     socket.join(code);
     socket.data.role = 'player';
     socket.data.room = code;
 
-    io.to(socket.id).emit('player:join-result', { ok: true, code, name: player.name });
+    io.to(socket.id).emit('player:join-result', { ok: true, code, name: player.name, id: player.id });
     io.in(code).emit('room:update', { players: room.players, scores: room.scores, progress: getProgress(room) });
     io.in(code).emit('ui:round-update', {
       progress:    getProgress(room),
@@ -320,11 +327,11 @@ io.on('connection', (socket) => {
   socket.on('player:buzz', () => {
     const c = socket.data.room; if (!c || !rooms[c]) return;
     const room = rooms[c]; if (room.locked) return;
-    const player = room.players.find(p => p.id === socket.id);
+    const player = room.players.find(p => p.sid === socket.id);
     room.locked   = true;
     room.lastBuzz = player ? { id: player.id, name: player.name } : null;
     io.in(c).emit('audio:pause');
-    // WICHTIG: id + name senden, damit Clients exakt markieren können
+    // id + name senden, damit Clients exakt markieren können
     if (room.lastBuzz) {
       io.in(c).emit('buzz:first', { id: room.lastBuzz.id, name: room.lastBuzz.name });
     } else {
@@ -372,12 +379,12 @@ io.on('connection', (socket) => {
     io.in(c).emit('scores:update', room.scores);
   });
 
-  // *** NEU: Manuelles Punkte ± im Moderator-Panel ***
+  // Manuelles Punkte ± im Moderator-Panel
   socket.on('mod:score-delta', ({ playerId, delta }) => {
     const c = socket.data.room; if (!c || !rooms[c]) return;
     const room = rooms[c];
 
-    // Nur Moderator dieses Raums darf das (optional, aber sinnvoll)
+    // nur Moderator des Raums
     if (room.moderatorId !== socket.id) return;
 
     const pExists = room.players.some(p => p.id === playerId);
@@ -390,12 +397,14 @@ io.on('connection', (socket) => {
     io.in(c).emit('scores:update', room.scores);
   });
 
-  // Skip-Vote
+  // Skip-Vote (jetzt mit pid)
   socket.on('player:vote-next', () => {
     const c = socket.data.room; if (!c || !rooms[c]) return;
     const room = rooms[c];
-    if (!room.nextVotes.includes(socket.id)) {
-      room.nextVotes.push(socket.id);
+    const p = room.players.find(x => x.sid === socket.id);
+    if (!p) return;
+    if (!room.nextVotes.includes(p.id)) {
+      room.nextVotes.push(p.id);
       broadcastVotes(c);
       const total = room.players.length;
       if (room.nextVotes.length >= total && total > 0) {
@@ -403,6 +412,75 @@ io.on('connection', (socket) => {
         io.in(c).emit('next:all');
       }
     }
+  });
+
+  // *** Refresh: Moderator kann alle Seiten neu laden lassen ***
+  socket.on('mod:refresh', () => {
+    const c = socket.data.room; if (!c || !rooms[c]) return;
+    const room = rooms[c];
+    room.refreshing = true;
+    io.in(c).emit('ui:refresh');          // Clients machen location.reload()
+    setTimeout(() => { if (rooms[c]) rooms[c].refreshing = false; }, 15000); // Schutzzeit
+  });
+
+  // *** Resume: Clients melden sich nach Reload automatisch ***
+  socket.on('player:hello', ({ code, id, name }) => {
+    code = (code || '').toUpperCase().trim();
+    if (!rooms[code]) return;
+    const room = rooms[code];
+
+    let p = id && room.players.find(x => x.id === id);
+    if (!p) {
+      // Notfalls anlegen (z. B. wenn LocalStorage nur Name/Code hatte)
+      p = { id: id || genPid(), sid: socket.id, name: String(name || 'Spieler').slice(0,24) };
+      room.players.push(p);
+      if (!(p.id in room.scores)) room.scores[p.id] = 0;
+    } else {
+      p.sid = socket.id;
+      if (name && p.name !== name) p.name = name;
+    }
+
+    socket.join(code);
+    socket.data.role = 'player';
+    socket.data.room = code;
+
+    io.to(socket.id).emit('player:join-result', { ok: true, code, name: p.name, id: p.id });
+
+    // aktuellen Stand nur an diesen Client
+    io.to(socket.id).emit('ui:round-update', {
+      progress:    getProgress(room),
+      playlists:   room.playlists,
+      activeRound: room.plIndex,
+      activeSong:  room.trIndex,
+      currentTitle: (room.playlists[room.plIndex]?.tracks[room.trIndex]?.title) || ''
+    });
+    io.to(socket.id).emit('room:update', { players: room.players, scores: room.scores, progress: getProgress(room) });
+    io.to(socket.id).emit('scores:update', room.scores);
+  });
+
+  socket.on('mod:hello', ({ code }) => {
+    if (!rooms[code]) return;
+    const room = rooms[code];
+
+    socket.join(code);
+    socket.data.role = 'moderator';
+    socket.data.room = code;
+    room.moderatorId = socket.id;
+
+    io.to(socket.id).emit('mod:room-created', {
+      code,
+      state:    room,
+      progress: getProgress(room),
+      playlists: room.playlists
+    });
+    io.to(socket.id).emit('ui:round-update', {
+      progress:    getProgress(room),
+      playlists:   room.playlists,
+      activeRound: room.plIndex,
+      activeSong:  room.trIndex,
+      currentTitle: (room.playlists[room.plIndex]?.tracks[room.trIndex]?.title) || ''
+    });
+    io.to(socket.id).emit('scores:update', room.scores);
   });
 
   // Disconnect
@@ -416,15 +494,23 @@ io.on('connection', (socket) => {
       io.in(c).socketsLeave(c);
       delete rooms[c];
     } else {
-      room.players   = room.players.filter(p => p.id !== socket.id);
-      room.nextVotes = room.nextVotes.filter(id => id !== socket.id);
-      io.in(c).emit('room:update', { players: room.players, scores: room.scores, progress: getProgress(room) });
-      broadcastVotes(c);
-      if (room.nextVotes.length === room.players.length && room.players.length > 0) {
-        io.in(c).emit('audio:pause');
-        io.in(c).emit('next:all');
+      // Spieler
+      const p = room.players.find(x => x.sid === socket.id);
+      if (room.refreshing) {
+        // während Refresh: nicht entfernen, nur SID lösen
+        if (p) p.sid = null;
+      } else {
+        // normal: Spieler entfernen
+        room.players   = room.players.filter(pl => pl.sid !== socket.id);
+        room.nextVotes = room.nextVotes.filter(id => id !== (p?.id));
+        io.in(c).emit('room:update', { players: room.players, scores: room.scores, progress: getProgress(room) });
+        broadcastVotes(c);
+        if (room.nextVotes.length === room.players.length && room.players.length > 0) {
+          io.in(c).emit('audio:pause');
+          io.in(c).emit('next:all');
+        }
+        if (room.lastBuzz && p && room.lastBuzz.id === p.id) room.lastBuzz = null;
       }
-      if (room.lastBuzz && room.lastBuzz.id === socket.id) room.lastBuzz = null;
     }
   });
 });

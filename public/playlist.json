@@ -10,8 +10,8 @@
       { "src": "sounds/p1_s6.mp3",  "title": "Song F" },
       { "src": "sounds/p1_s7.mp3",  "title": "Song G" },
       { "src": "sounds/p1_s8.mp3",  "title": "Song H" },
-      { "src": "sounds/danke für nichts.mp3",  "title": "danke-für-nichts" },
-      { "src": "sounds/auf-gute-freunde.mp3", "title": "Auf-gute-Freunde" }
+      { "src": "sounds/danke-fuer-nichts.mp3",  "title": "danke für nichts" },
+      { "src": "sounds/auf-gute-freunde.mp3", "title": "Auf gute Freunde" }
     ]
   },
   {

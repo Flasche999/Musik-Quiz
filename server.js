@@ -47,8 +47,6 @@ app.get('/moderator.html', (_req, res) => safeSend('moderator.html', res, 'Fehle
 app.get('/player.html',    (_req, res) => safeSend('player.html',    res, 'Fehler: public/player.html fehlt.'));
 
 // ─────────────────────────────────────────────────────────────
-// Playlists laden (Strings oder {src,title} unterstützt)
-// ─────────────────────────────────────────────────────────────
 function normalizeTrack(t) {
   if (typeof t === 'string') {
     const name = t.split('/').pop().replace(/\.[^/.]+$/, '');
@@ -71,7 +69,7 @@ function loadPlaylists() {
       return arr
         .map((pl, idx) => ({
           name: String(pl.name || pl.artist || `Playlist ${idx + 1}`),
-          solution: String(pl.solution || ''),               // <— Lösung mitnehmen
+          solution: String(pl.solution || ''),
           tracks: Array.isArray(pl.tracks) ? pl.tracks.map(normalizeTrack).filter(t => t.src) : []
         }))
         .filter(pl => pl.tracks.length > 0);
@@ -291,8 +289,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Wenn wir von Track 1 zur nächsten Playlist gewechselt haben,
-    // setze den Namen der vorherigen Playlist auf die Lösung
+    // Von Track 1 zur nächsten Playlist → vorherige Playlist auf Lösung umbenennen
     if (prevTR === 0 && room.plIndex !== prevPL) {
       const prev = room.playlists[prevPL];
       if (prev && prev.solution) prev.name = prev.solution;
@@ -327,7 +324,12 @@ io.on('connection', (socket) => {
     room.locked   = true;
     room.lastBuzz = player ? { id: player.id, name: player.name } : null;
     io.in(c).emit('audio:pause');
-    io.in(c).emit('buzz:first', { name: room.lastBuzz?.name || 'Unbekannt' });
+    // WICHTIG: id + name senden, damit Clients exakt markieren können
+    if (room.lastBuzz) {
+      io.in(c).emit('buzz:first', { id: room.lastBuzz.id, name: room.lastBuzz.name });
+    } else {
+      io.in(c).emit('buzz:first', { name: 'Unbekannt' });
+    }
   });
 
   // Ergebnis (Punkte = aktuelle Songnummer)
@@ -346,7 +348,7 @@ io.on('connection', (socket) => {
         solution: room.playlists[room.plIndex]?.solution || ''
       });
 
-      // Serverseitig: Namen dauerhaft auf Lösung setzen + UI refresh
+      // Namen dauerhaft auf Lösung setzen + UI refresh
       try {
         if (room.playlists[room.plIndex]?.solution) {
           room.playlists[room.plIndex].name = room.playlists[room.plIndex].solution;
@@ -367,6 +369,24 @@ io.on('connection', (socket) => {
       io.in(c).emit('result:wrong', { name: last.name });
     }
 
+    io.in(c).emit('scores:update', room.scores);
+  });
+
+  // *** NEU: Manuelles Punkte ± im Moderator-Panel ***
+  socket.on('mod:score-delta', ({ playerId, delta }) => {
+    const c = socket.data.room; if (!c || !rooms[c]) return;
+    const room = rooms[c];
+
+    // Nur Moderator dieses Raums darf das (optional, aber sinnvoll)
+    if (room.moderatorId !== socket.id) return;
+
+    const pExists = room.players.some(p => p.id === playerId);
+    if (!pExists) return;
+
+    const d = Number(delta);
+    if (!Number.isFinite(d) || d === 0) return;
+
+    room.scores[playerId] = (room.scores[playerId] || 0) + d;
     io.in(c).emit('scores:update', room.scores);
   });
 

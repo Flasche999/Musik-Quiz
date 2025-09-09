@@ -201,7 +201,7 @@ io.on('connection', (socket) => {
       activeSong:  room.trIndex,
       currentTitle: tr.title
     });
-    io.in(c).emit('round:prepare', { src: tr.src, title: tr.title, playlistName: room.playlists[room.plIndex]?.name, solution: room.playlists[room.plIndex]?.solution || '' });
+    io.in(c).emit('round:prepare', { src: tr.src, title: tr.title });
     io.in(c).emit('buzz:unlock'); // Sicherheit: nach Rundenset Buzzer frei
   });
 
@@ -252,7 +252,7 @@ io.on('connection', (socket) => {
     const tr = currentTrack(room);
     io.in(c).emit('progress:update', getProgress(room));
     io.in(c).emit('next:update', { count: 0, total: room.players.length, names: [] });
-    io.in(c).emit('round:prepare', { src: tr.src, title: tr.title, playlistName: room.playlists[room.plIndex]?.name, solution: room.playlists[room.plIndex]?.solution || '' });
+    io.in(c).emit('round:prepare', { src: tr.src, title: tr.title });
     io.in(c).emit('buzz:unlock'); // NEU: Buzzer für alle freigeben
     setTimeout(() => io.in(c).emit('audio:play'), 200);
   });
@@ -271,24 +271,15 @@ io.on('connection', (socket) => {
     const c = socket.data.room; if (!c || !rooms[c]) return;
     const room = rooms[c];
 
-    const prevPL = room.plIndex; const prevTR = room.trIndex;
     if (!prevTrack(room)) {
       io.in(c).emit('status', '🎉 Alle Playlists fertig!');
       return;
     }
-    // Wenn wir gerade von Track 1 auf die nächste Playlist gewechselt haben → vorige Playlist als gelöst melden
-    if (prevTR === 0 && room.plIndex !== prevPL) {
-      io.in(c).emit('round:solved', {
-        playlistName: room.playlists[prevPL]?.name,
-        solution: room.playlists[prevPL]?.solution || ''
-      });
-    }
-
     room.locked = false; room.lastBuzz = null; room.nextVotes = [];
     const tr = currentTrack(room);
     io.in(c).emit('progress:update', getProgress(room));
     io.in(c).emit('next:update', { count: 0, total: room.players.length, names: [] });
-    io.in(c).emit('round:prepare', { src: tr.src, title: tr.title, playlistName: room.playlists[room.plIndex]?.name, solution: room.playlists[room.plIndex]?.solution || '' });
+    io.in(c).emit('round:prepare', { src: tr.src, title: tr.title });
     io.in(c).emit('buzz:unlock'); // NEU: Buzzer wieder freigeben
     io.in(c).emit('ui:round-update', {
       progress:    getProgress(room),
@@ -319,12 +310,17 @@ io.on('connection', (socket) => {
     if (type === 'correct' && last) {
       room.scores[last.id] = (room.scores[last.id] || 0) + points;
       io.in(c).emit('result:correct', { name: last.name, points });
-    }
-      // Nach korrekter Antwort: Playlist als gelöst markieren (Anzeige beim Moderator ersetzen)
+      // Playlist als gelöst markieren (Anzeige beim Moderator ersetzen)
       io.in(c).emit('round:solved', {
         playlistName: room.playlists[room.plIndex]?.name,
         solution: room.playlists[room.plIndex]?.solution || ''
-      }); else if (type === 'wrong' && last) {
+      });
+    } else if (type === 'wrong' && last) {
+      room.players.forEach(p => { if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1; });
+      io.in(c).emit('result:wrong', { name: last.name });
+    }
+    io.in(c).emit('scores:update', room.scores);
+  });} else if (type === 'wrong' && last) {
       room.players.forEach(p => { if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1; });
       io.in(c).emit('result:wrong', { name: last.name });
     }

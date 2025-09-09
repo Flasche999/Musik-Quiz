@@ -23,3 +23,24 @@ audio{ width:100%; margin-top:10px; }
 .err{ color:var(--bad); }
 .status{ color:var(--muted); font-size:14px; margin-top:8px; }
 code.small{ font-size:12px; color:var(--muted); }
+/* ── Buzz-Markierung (Moderator + Spieleransicht) ───────────── */
+.player.buzzing{
+  outline: 2px solid var(--bad);
+  box-shadow: 0 0 12px rgba(239,68,68,.55);
+  background: #1a0e10;
+  position: relative;
+}
+.player.buzzing::after{
+  content: "🔔";
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  font-size: 14px;
+  opacity: .9;
+}
+@keyframes buzzPulse{
+  0%{ box-shadow: 0 0 0 0 rgba(239,68,68,.55); }
+  70%{ box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+  100%{ box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+}
+.player.buzzing{ animation: buzzPulse 1.2s ease-out infinite; }

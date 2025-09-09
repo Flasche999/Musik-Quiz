@@ -217,9 +217,12 @@ function clearHighlight(){
 });
 
     socket.on('buzz:unlock', () => {
-      updateBuzz(true);
-      const st = el('#status'); if (st) st.textContent = '';
-    });
+  updateBuzz(true);
+  const st = el('#status'); if (st) st.textContent = '';
+  clearHighlight();
+  window._lastFirstBuzzer = null;
+});
+
 
     // Spieler- & Punkte-Updates
     socket.on('room:update', ({ players, scores }) => {

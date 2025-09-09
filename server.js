@@ -202,15 +202,27 @@ io.on('connection', (socket) => {
       currentTitle: tr.title
     });
     io.in(c).emit('round:prepare', { src: tr.src, title: tr.title });
+    io.in(c).emit('buzz:unlock'); // Sicherheit: nach Rundenset Buzzer frei
   });
 
-  // Spieler joint
+  // Spieler joint (Doppelbeitritt verhindern)
   socket.on('player:join', ({ code, name }) => {
     code = (code || '').toUpperCase().trim();
-    if (!rooms[code]) return io.to(socket.id).emit('player:join-result', { ok: false, error: 'Raum nicht gefunden.' });
+    if (!rooms[code]) {
+      return io.to(socket.id).emit('player:join-result', { ok: false, error: 'Raum nicht gefunden.' });
+    }
 
     const room = rooms[code];
-    if (room.players.length >= 6) return io.to(socket.id).emit('player:join-result', { ok: false, error: 'Raum ist voll (max. 6).' });
+
+    // Schon drin? -> nicht doppelt hinzufügen
+    const existing = room.players.find(p => p.id === socket.id);
+    if (existing) {
+      return io.to(socket.id).emit('player:join-result', { ok: true, code, name: existing.name });
+    }
+
+    if (room.players.length >= 6) {
+      return io.to(socket.id).emit('player:join-result', { ok:false, error:'Raum ist voll (max. 6).' });
+    }
 
     const player = { id: socket.id, name: String(name || 'Spieler').slice(0, 24) };
     room.players.push(player);
@@ -241,6 +253,7 @@ io.on('connection', (socket) => {
     io.in(c).emit('progress:update', getProgress(room));
     io.in(c).emit('next:update', { count: 0, total: room.players.length, names: [] });
     io.in(c).emit('round:prepare', { src: tr.src, title: tr.title });
+    io.in(c).emit('buzz:unlock'); // NEU: Buzzer für alle freigeben
     setTimeout(() => io.in(c).emit('audio:play'), 200);
   });
 
@@ -267,6 +280,7 @@ io.on('connection', (socket) => {
     io.in(c).emit('progress:update', getProgress(room));
     io.in(c).emit('next:update', { count: 0, total: room.players.length, names: [] });
     io.in(c).emit('round:prepare', { src: tr.src, title: tr.title });
+    io.in(c).emit('buzz:unlock'); // NEU: Buzzer wieder freigeben
     io.in(c).emit('ui:round-update', {
       progress:    getProgress(room),
       playlists:   room.playlists,

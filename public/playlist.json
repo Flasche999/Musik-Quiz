@@ -3,31 +3,32 @@
     "name": "Playlist 1",
     "tracks": [
       { "src": "sounds/auf-gute-freunde.mp3",  "title": "Auf gute Freunde" },
-      { "src": "sounds/danke-fuer-nichts.mp3",  "title": "Danke für nichts" },
-      { "src": "sounds/die-besten-sterben-jung.mp3",  "title": "Nur die besten sterben jung" },
-      { "src": "sounds/finde-die-wahrheit.mp3",  "title": "Finde die wahrheit" },
-      { "src": "sounds/lange-nicht-genug.mp3",  "title": "Lange nicht genug" },
-      { "src": "sounds/Terpentin.mp3",  "title": "Terpentin" },
-      { "src": "sounds/2000.mp3",  "title": "2000" },
-      { "src": "sounds/Mexico.mp3",  "title": "Mexico" },
-      { "src": "sounds/lieber-stehend-sterben.mp3",  "title": "Lieber stehend sterben" },
+      { "src": "sounds/danke-fuer-nichts.mp3", "title": "Danke für nichts" },
+      { "src": "sounds/die-besten-sterben-jung.mp3", "title": "Nur die besten sterben jung" },
+      { "src": "sounds/finde-die-wahrheit.mp3", "title": "Finde die Wahrheit" },
+      { "src": "sounds/lange-nicht-genug.mp3", "title": "Lange nicht genug" },
+      { "src": "sounds/Terpentin.mp3", "title": "Terpentin" },
+      { "src": "sounds/2000.mp3", "title": "2000" },
+      { "src": "sounds/Mexico.mp3", "title": "Mexico" },
+      { "src": "sounds/lieber-stehend-sterben.mp3", "title": "Lieber stehend sterben" },
       { "src": "sounds/Kirche.mp3", "title": "Kirche" }
     ]
   },
   {
     "name": "Playlist 2",
     "tracks": [
-      "sounds/p2_s1.mp3",
-      "sounds/p2_s2.mp3",
-      "sounds/p2_s3.mp3",
-      "sounds/p2_s4.mp3",
-      "sounds/p2_s5.mp3",
-      "sounds/p2_s6.mp3",
-      "sounds/p2_s7.mp3",
-      "sounds/p2_s8.mp3",
-      "sounds/p2_s9.mp3",
-      "sounds/p2_s10.mp3"
+      { "src": "sounds/Atemlos-durch-die-nacht.mp3", "title": "Atemlos durch die Nacht" },
+      { "src": "sounds/Herzbeben.mp3", "title": "Herzbeben" },
+      { "src": "sounds/Achterbahn.mp3", "title": "Achterbahn" },
+      { "src": "sounds/Baby-Shark.mp3", "title": "Baby Shark" },
+      { "src": "sounds/Blitz.mp3", "title": "Blitz" },
+      { "src": "sounds/Flieger.mp3", "title": "Flieger" },
+      { "src": "sounds/Ich-will-immer-wieder.mp3", "title": "Ich will immer wieder" },
+      { "src": "sounds/Fehlerfrei.mp3", "title": "Fehlerfrei" },
+      { "src": "sounds/Phaenomenm", "title": "Phaenomen" },
+      { "src": "sounds/Null-auf-100.mp3", "title": "Null auf 100" }
     ]
   }
 ]
+
 

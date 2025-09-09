@@ -2,7 +2,7 @@
 {
 "name": "Playlist 1",
 "tracks": [
-{ "src": "sounds/p1_s1.mp3", "title": "Song A" },
+{ "src": "sounds/p1_s1.mp3", "auf gute freunde": "Song A" },
 { "src": "sounds/p1_s2.mp3", "title": "Song B" },
 { "src": "sounds/p1_s3.mp3", "title": "Song C" },
 { "src": "sounds/p1_s4.mp3", "title": "Song D" },

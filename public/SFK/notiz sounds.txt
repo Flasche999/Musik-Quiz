@@ -1,3 +1,0 @@
-buzzer
-wrong
-correct

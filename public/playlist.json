@@ -4,14 +4,14 @@
     "tracks": [
       { "src": "sounds/auf-gute-freunde.mp3",  "title": "Auf gute Freunde" },
       { "src": "sounds/danke-fuer-nichts.mp3",  "title": "Danke für nichts" },
-      { "src": "sounds/die-besten-sterben-jung",  "title": "Nur die besten sterben jung" },
-      { "src": "sounds/finde-die-wahrheit",  "title": "Finde die wahrheit" },
-      { "src": "sounds/lange-nicht-genug",  "title": "Lange nicht genug" },
-      { "src": "sounds/Terpentin",  "title": "Terpentin" },
-      { "src": "sounds/2000",  "title": "2000" },
-      { "src": "sounds/Mexico",  "title": "Mexico" },
-      { "src": "sounds/lieber-stehend-sterben",  "title": "Lieber stehend sterben" },
-      { "src": "sounds/Kirche", "title": "Kirche" }
+      { "src": "sounds/die-besten-sterben-jung.mp3",  "title": "Nur die besten sterben jung" },
+      { "src": "sounds/finde-die-wahrheit.mp3",  "title": "Finde die wahrheit" },
+      { "src": "sounds/lange-nicht-genug.mp3",  "title": "Lange nicht genug" },
+      { "src": "sounds/Terpentin.mp3",  "title": "Terpentin" },
+      { "src": "sounds/2000.mp3",  "title": "2000" },
+      { "src": "sounds/Mexico.mp3",  "title": "Mexico" },
+      { "src": "sounds/lieber-stehend-sterben.mp3",  "title": "Lieber stehend sterben" },
+      { "src": "sounds/Kirche.mp3", "title": "Kirche" }
     ]
   },
   {

@@ -226,12 +226,16 @@ function clearHighlight(){
 
     // Spieler- & Punkte-Updates
     socket.on('room:update', ({ players, scores }) => {
-      window._players = players;
-      renderPlayers(players, scores || {});
-    });
+  window._players = players;
+  renderPlayers(players, scores || {});
+  if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer); // <— NEU
+});
+
     socket.on('scores:update', (scores) => {
-      renderPlayers(window._players || [], scores || {});
-    });
+  renderPlayers(window._players || [], scores || {});
+  if (window._lastFirstBuzzer) highlightBuzz(window._lastFirstBuzzer); // <— NEU
+});
+
 
     // Nur Rundennamen refreshen (optional)
     socket.on('progress:update', (p) => {

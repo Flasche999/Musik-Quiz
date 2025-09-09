@@ -301,31 +301,32 @@ io.on('connection', (socket) => {
     io.in(c).emit('buzz:first', { name: room.lastBuzz?.name || 'Unbekannt' });
   });
 
-  // Ergebnis (Punkte = aktuelle Songnummer)
+   // Ergebnis (Punkte = aktuelle Songnummer)
   socket.on('mod:result', ({ type }) => {
     const c = socket.data.room; if (!c || !rooms[c]) return;
     const room = rooms[c]; const last = room.lastBuzz;
     const points = pointsForCurrent(room);
 
     if (type === 'correct' && last) {
-      room.scores[last.id] = (room.scores[last.id] || 0) + points;
-      io.in(c).emit('result:correct', { name: last.name, points });
-      // Playlist als gelöst markieren (Anzeige beim Moderator ersetzen)
-      io.in(c).emit('round:solved', {
-        playlistName: room.playlists[room.plIndex]?.name,
-        solution: room.playlists[room.plIndex]?.solution || ''
-      });
-    } else if (type === 'wrong' && last) {
-      room.players.forEach(p => { if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1; });
-      io.in(c).emit('result:wrong', { name: last.name });
-    }
-    io.in(c).emit('scores:update', room.scores);
-  });} else if (type === 'wrong' && last) {
-      room.players.forEach(p => { if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1; });
-      io.in(c).emit('result:wrong', { name: last.name });
-    }
+    room.scores[last.id] = (room.scores[last.id] || 0) + points;
+    io.in(c).emit('result:correct', { name: last.name, points });
+
+    // Playlist als gelöst markieren (Anzeige beim Moderator ersetzen)
+    io.in(c).emit('round:solved', {
+      playlistName: room.playlists[room.plIndex]?.name,
+      solution: room.playlists[room.plIndex]?.solution || ''
+    });
+
+  } else if (type === 'wrong' && last) {
+    room.players.forEach(p => {
+      if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1;
+    });
+    io.in(c).emit('result:wrong', { name: last.name });
+  }
+
     io.in(c).emit('scores:update', room.scores);
   });
+
 
   // Skip-Vote
   socket.on('player:vote-next', () => {

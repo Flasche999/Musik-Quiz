@@ -71,6 +71,26 @@
         .forEach(div => div.classList.remove('buzzing'));
     }
 
+    // ── FX: Animation beim Playlist-Wechsel (Moderator) ──────────
+    function playlistSwitchFXMod(){
+      const rn    = el('#roundName');
+      const songs = el('#songList');
+      const list  = el('#roundList');
+
+      [rn, songs].forEach(n => {
+        if (!n) return;
+        n.classList.remove('pl-switch');
+        void n.offsetWidth;              // Reflow → Animation resetten
+        n.classList.add('pl-switch');
+      });
+
+      const active = list?.querySelector('.item.active');
+      if (active){
+        active.classList.add('just-activated');
+        setTimeout(() => active.classList.remove('just-activated'), 900);
+      }
+    }
+
     // Buttons
     el('#btnCreate').onclick = () => socket.emit('mod:create-room');
     el('#btnStart').onclick  = () => socket.emit('mod:start-round');
@@ -148,12 +168,21 @@
       el('#roundName').textContent = progress.roundName;
       renderRounds(playlists, progress.roundIndex - 1);
       renderSongs(progress.songTotal, progress.songIndex - 1, '');
+      // Initialindex merken, damit der erste ui:round-update nicht animiert
+      window._modLastRoundIndex = progress.roundIndex - 1;
     });
 
     socket.on('ui:round-update', ({ progress, playlists, activeRound, activeSong, currentTitle }) => {
+      const was = window._modLastRoundIndex;
       el('#roundName').textContent = progress.roundName;
+
       renderRounds(playlists, activeRound);
       renderSongs(progress.songTotal, activeSong, currentTitle||'');
+
+      if (was !== undefined && was !== activeRound) {
+        playlistSwitchFXMod();
+      }
+      window._modLastRoundIndex = activeRound;
     });
 
     socket.on('round:prepare', ({ src, title, playlistName, solution }) => {

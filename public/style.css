@@ -61,4 +61,24 @@ code.small{ font-size:12px; color:var(--muted); }
 .score-btn.plus  { background: #13331a; }
 .score-btn.minus { background: #2a1515; }
 .score-btn:hover { filter: brightness(1.1); }
+/* ── Playlist-Switch Effekte ───────────────────────────────── */
+.pl-switch {
+  animation: plSwitch 600ms ease forwards;
+}
+@keyframes plSwitch {
+  0%   { opacity: 0; transform: translateY(8px) scale(.98); filter: saturate(.6); }
+  40%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: saturate(1); }
+}
+
+/* Puls für gerade aktivierte Playlist in der Sidebar */
+.item.just-activated {
+  animation: plPulse 900ms ease-out 1;
+}
+@keyframes plPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(99, 102, 241, .6); }
+  70%  { box-shadow: 0 0 0 14px rgba(99, 102, 241, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
 

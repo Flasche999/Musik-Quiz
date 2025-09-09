@@ -63,6 +63,19 @@
     let canBuzz = false;   // erst aktiv, wenn Runde/Unlock kommt
     let allowServerPlay = false; // verhindert manuelles Play
 
+    // >>> Auto-Resume beim Laden + Server-Refresh <<<
+    try {
+      const saved = JSON.parse(localStorage.getItem('mq_player') || 'null');
+      if (saved?.code) {
+        // Felder vorfüllen (nice to have)
+        if (inpCode) inpCode.value = saved.code;
+        if (inpName && saved.name) inpName.value = saved.name;
+        // dem Server sagen: ich bin wieder da
+        socket.emit('player:hello', { code: saved.code, id: saved.id, name: saved.name });
+      }
+    } catch {}
+    socket.on('ui:refresh', () => { location.reload(); });
+
     // UI Helpers
     function setJoinLocked(locked) {
       inpCode.disabled = locked;
@@ -189,9 +202,14 @@
       if (r.ok){
         joined = true;
         el('#roomCode') && (el('#roomCode').textContent = r.code);
-        st && (st.textContent = 'Beigetreten als ' + r.name);
+        st && (st.textContent = 'Beigetreten als ' + (r.name || 'Spieler'));
         setJoinLocked(true);      // Felder und Button sperren
         updateBuzz(true);         // Buzz initial erlauben
+
+        // >>> Save for Auto-Resume
+        try {
+          localStorage.setItem('mq_player', JSON.stringify({ code: r.code, name: r.name, id: r.id }));
+        } catch {}
       } else {
         st && (st.textContent = 'Fehler: ' + r.error);
         btnJoin.disabled = false; // erneuten Versuch erlauben

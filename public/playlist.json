@@ -2,16 +2,16 @@
   {
     "name": "Playlist 1",
     "tracks": [
-      { "src": "sounds/p1_s1.mp3",  "title": "Song A" },
-      { "src": "sounds/p1_s2.mp3",  "title": "Song B" },
-      { "src": "sounds/p1_s3.mp3",  "title": "Song C" },
-      { "src": "sounds/p1_s4.mp3",  "title": "Song D" },
-      { "src": "sounds/p1_s5.mp3",  "title": "Song E" },
-      { "src": "sounds/p1_s6.mp3",  "title": "Song F" },
-      { "src": "sounds/p1_s7.mp3",  "title": "Song G" },
-      { "src": "sounds/finde-die-wahrheit.mp3",  "title": "finde die wahrheit" },
-      { "src": "sounds/danke-fuer-nichts.mp3",  "title": "danke für nichts" },
-      { "src": "sounds/auf-gute-freunde.mp3", "title": "Auf gute Freunde" }
+      { "src": "sounds/auf-gute-freunde.mp3",  "title": "Auf gute Freunde" },
+      { "src": "sounds/danke-fuer-nichts.mp3",  "title": "Danke für nichts" },
+      { "src": "sounds/die-besten-sterben-jung",  "title": "Nur die besten sterben jung" },
+      { "src": "sounds/finde-die-wahrheit",  "title": "Finde die wahrheit" },
+      { "src": "sounds/lange-nicht-genug",  "title": "Lange nicht genug" },
+      { "src": "sounds/Terpentin",  "title": "Terpentin" },
+      { "src": "sounds/2000",  "title": "2000" },
+      { "src": "sounds/Mexico",  "title": "Mexico" },
+      { "src": "sounds/lieber-stehend-sterben",  "title": "Lieber stehend sterben" },
+      { "src": "sounds/Kirche", "title": "Kirche" }
     ]
   },
   {

@@ -80,5 +80,8 @@ code.small{ font-size:12px; color:var(--muted); }
   70%  { box-shadow: 0 0 0 14px rgba(99, 102, 241, 0); }
   100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
 }
+#btnRefresh { background:#0b2033; }
+#btnRefresh:hover { filter:brightness(1.1); }
+
 
 

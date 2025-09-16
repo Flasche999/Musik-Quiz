@@ -48,3 +48,20 @@
     "solution": "Die Ärzte"
   }
 ]
+  },
+  {
+    "name": "Playlist 4",
+    "tracks": [
+      { "src": "sounds/APECRIME AFFENGANG.mp3", "title": "Affengang" },
+      { "src": "sounds/APECRIME SWING DEIN DING.mp3", "title": "Swing dein ding" },
+      { "src": "sounds/APECRIME ZUM GEBURTSTAG.mp3", "title": "Zum Geburtstag" },
+      { "src": "sounds/APECRIME WILD WEST.mp3", "title": "Wild West" },
+      { "src": "sounds/APECRIME STOLZ.mp3", "title": "Stolz" },
+      { "src": "sounds/APECRIME SCHAUKEL MEINE EIER.mp3", "title": "Schaukel meine Eier" },
+      { "src": "sounds/APECRIME ICH TRAUE MICH NICHT.mp3", "title": "Ich traue mich nicht" },
+      { "src": "sounds/APECRIME ASSASSINS CREED.mp3", "title": "Assassins Creed" },
+      { "src": "sounds/APECRIME BANG.mp3", "title": "Bang" },
+      { "src": "sounds/APECRIME EINER VON UNS.mp3", "title": "Einer von uns" }
+    ],
+    "solution": "Apecrime"
+  }

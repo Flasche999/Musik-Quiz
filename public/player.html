@@ -29,6 +29,8 @@
         <button id="btnJoin" class="primary">Beitreten</button>
         <button id="btnBuzz">🔔 Buzz</button>
         <button id="btnVoteNext">⏭️ Vote Next</button>
+        <!-- 🔊 Audio-Entsperren (blendet sich nach Klick aus) -->
+        <button id="unlock-audio" class="primary" style="margin-left:8px;">🔊 Ton aktivieren</button>
       </div>
 
       <!-- Audio ohne Controls für Spieler (Musik) -->
@@ -63,12 +65,37 @@
       correct: el('#sfxCorrect'),
       wrong:   el('#sfxWrong')
     };
+
+    // 🔊 Browser-Audio-Restriktionen: beim ersten User-Input entsperren
+    let audioUnlocked = false;
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      Object.values(sfx).forEach(a => {
+        try {
+          a.volume = 1.0; // ggf. anpassen
+          a.load();
+        } catch {}
+      });
+      audioUnlocked = true;
+      const btn = el('#unlock-audio');
+      if (btn) btn.style.display = 'none';
+    }
+    // Button & erste Interaktion
+    el('#unlock-audio')?.addEventListener('click', unlockAudio);
+    document.addEventListener('keydown', unlockAudio, { once: true });
+    document.addEventListener('pointerdown', unlockAudio, { once: true });
+
     function playSfx(a){
       try {
         if (!a) return;
         a.pause();
         a.currentTime = 0;
-        a.play().catch(()=>{});
+        const p = a.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {
+          // Falls noch gelockt: Button anzeigen
+          const btn = el('#unlock-audio');
+          if (btn) btn.style.display = '';
+        });
       } catch {}
     }
 
@@ -118,7 +145,7 @@
       if (!canBuzz || btnBuzz.disabled) return;
       socket.emit('player:buzz');
       updateBuzz(false); // lokal sperren bis Server reagiert
-      // Optional: lokales Klickfeedback (leise)
+      // Optional: lokales Klickfeedback:
       // playSfx(sfx.buzz);
     };
     btnVoteNext.onclick = () => socket.emit('player:vote-next');
@@ -213,6 +240,13 @@
 
     // --- Socket Events ---
 
+    // 🔊 Globaler SFX-Trigger vom Server (buzzer/correct/wrong)
+    socket.on('sfx:play', ({ type } = {}) => {
+      if (type === 'buzzer')  return playSfx(sfx.buzz);
+      if (type === 'correct') return playSfx(sfx.correct);
+      if (type === 'wrong')   return playSfx(sfx.wrong);
+    });
+
     // Join-Ergebnis
     socket.on('player:join-result', (r) => {
       const st = el('#status');
@@ -270,7 +304,7 @@
       if (st) st.textContent = `🔔 ${name || 'Ein Spieler'} war zuerst!`;
       updateBuzz(false);
 
-      // SFX
+      // Lokales Feedback (zusätzlich zu sfx:play ok)
       playSfx(sfx.buzz);
 
       window._lastFirstBuzzer = (id ? { id, name } : { name });

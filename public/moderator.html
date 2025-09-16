@@ -28,23 +28,30 @@
         <button id="btnPause">⏸️ Pause</button>
         <button id="btnUnlock">🔓 Buzzer freigeben</button>
         <button id="btnNext">⏭️ Nächster Song</button>
-        <!-- 🔊 Ergänzt: Audio-Entsperren -->
+        <!-- 🔊 Audio-Entsperren -->
         <button id="unlock-audio" class="primary" style="margin-left:8px;">🔊 Ton aktivieren</button>
       </div>
 
       <!-- Musik-Player -->
-      <audio id="audio" controls></audio>
+      <audio id="audio" controls playsinline></audio>
 
       <!-- SFX: Buzzer/Correct/Wrong (Moderator hört auch Sounds) -->
-      <audio id="sfxBuzz"    preload="auto" src="/sfx/buzzer.mp3"  style="display:none"></audio>
-      <audio id="sfxCorrect" preload="auto" src="/sfx/correct.mp3" style="display:none"></audio>
-      <audio id="sfxWrong"   preload="auto" src="/sfx/wrong.mp3"   style="display:none"></audio>
+      <audio id="sfxBuzz"    preload="auto" src="/sfx/buzzer.mp3"  style="display:none" playsinline></audio>
+      <audio id="sfxCorrect" preload="auto" src="/sfx/correct.mp3" style="display:none" playsinline></audio>
+      <audio id="sfxWrong"   preload="auto" src="/sfx/wrong.mp3"   style="display:none" playsinline></audio>
 
       <div id="status" class="status"></div>
 
       <div class="row" style="margin-top:10px;">
         <button id="btnCorrect" class="ok">✅ Richtig</button>
         <button id="btnWrong" class="err">❌ Falsch</button>
+      </div>
+
+      <!-- 🔧 Optional: SFX-Schnelltest -->
+      <div class="row" style="margin-top:8px">
+        <button id="tBuzz">Test Buzzer</button>
+        <button id="tCorrect">Test Correct</button>
+        <button id="tWrong">Test Wrong</button>
       </div>
     </main>
 
@@ -67,23 +74,38 @@
       correct: el('#sfxCorrect'),
       wrong:   el('#sfxWrong')
     };
+
     function playSfx(a){
       try {
         if (!a) return;
+        a.muted = false;
+        a.volume = 1.0;
         a.pause();
         a.currentTime = 0;
-        a.play().catch(()=>{});
-      } catch {}
+        const p = a.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(err => {
+            console.warn('[SFX] play blocked', err);
+            const btn = el('#unlock-audio');
+            if (btn) btn.style.display = '';
+          });
+        }
+      } catch (e) {
+        console.warn('[SFX] play error', e);
+      }
     }
 
-    // 🔊 Ergänzt: Audio-Entsperren für SFX (Autoplay-Policy)
+    // 🔊 Audio-Entsperren (Autoplay-Policy)
     let audioUnlocked = false;
     function unlockAudio(){
       if (audioUnlocked) return;
-      Object.values(sfx).forEach(a => { try { a.volume = 1.0; a.load(); } catch {} });
+      Object.values(sfx).forEach(a => {
+        try { a.muted = false; a.volume = 1.0; a.load(); } catch {}
+      });
       audioUnlocked = true;
       const btn = el('#unlock-audio');
       if (btn) btn.style.display = 'none';
+      console.log('[SFX] Audio unlocked');
     }
     el('#unlock-audio')?.addEventListener('click', unlockAudio);
     document.addEventListener('keydown', unlockAudio, { once: true });
@@ -231,8 +253,9 @@
     socket.on('audio:play',  () => audio.play().catch(()=>{}));
     socket.on('audio:pause', () => audio.pause());
 
-    // 🔊 Ergänzt: Globaler SFX-Trigger vom Server (buzzer/correct/wrong)
+    // 🔊 Globaler SFX-Trigger vom Server (buzzer/correct/wrong)
     socket.on('sfx:play', ({ type } = {}) => {
+      console.log('[SFX] recv', type);
       if (type === 'buzzer')  return playSfx(sfx.buzz);
       if (type === 'correct') return playSfx(sfx.correct);
       if (type === 'wrong')   return playSfx(sfx.wrong);
@@ -296,6 +319,11 @@
       const item = items.find(el => el.textContent.trim() === originalName);
       if (item) item.textContent = newLabel;
     }
+
+    // 🔧 Test-Buttons
+    el('#tBuzz')?.addEventListener('click',  () => playSfx(sfx.buzz));
+    el('#tCorrect')?.addEventListener('click', () => playSfx(sfx.correct));
+    el('#tWrong')?.addEventListener('click',  () => playSfx(sfx.wrong));
   </script>
 </body>
 </html>

@@ -28,6 +28,8 @@
         <button id="btnPause">⏸️ Pause</button>
         <button id="btnUnlock">🔓 Buzzer freigeben</button>
         <button id="btnNext">⏭️ Nächster Song</button>
+        <!-- 🔊 Ergänzt: Audio-Entsperren -->
+        <button id="unlock-audio" class="primary" style="margin-left:8px;">🔊 Ton aktivieren</button>
       </div>
 
       <!-- Musik-Player -->
@@ -73,6 +75,19 @@
         a.play().catch(()=>{});
       } catch {}
     }
+
+    // 🔊 Ergänzt: Audio-Entsperren für SFX (Autoplay-Policy)
+    let audioUnlocked = false;
+    function unlockAudio(){
+      if (audioUnlocked) return;
+      Object.values(sfx).forEach(a => { try { a.volume = 1.0; a.load(); } catch {} });
+      audioUnlocked = true;
+      const btn = el('#unlock-audio');
+      if (btn) btn.style.display = 'none';
+    }
+    el('#unlock-audio')?.addEventListener('click', unlockAudio);
+    document.addEventListener('keydown', unlockAudio, { once: true });
+    document.addEventListener('pointerdown', unlockAudio, { once: true });
 
     // ── Buzz-Markierung (Moderator) ──────────────────────────────
     window._modLastFirstBuzzer = null;
@@ -216,6 +231,13 @@
     socket.on('audio:play',  () => audio.play().catch(()=>{}));
     socket.on('audio:pause', () => audio.pause());
 
+    // 🔊 Ergänzt: Globaler SFX-Trigger vom Server (buzzer/correct/wrong)
+    socket.on('sfx:play', ({ type } = {}) => {
+      if (type === 'buzzer')  return playSfx(sfx.buzz);
+      if (type === 'correct') return playSfx(sfx.correct);
+      if (type === 'wrong')   return playSfx(sfx.wrong);
+    });
+
     // Buzz → markieren + Sound
     socket.on('buzz:first', (payload = {}) => {
       const { name, id } = payload;
@@ -224,7 +246,7 @@
       window._modLastFirstBuzzer = (id ? { id, name } : { name });
       modHighlightBuzz(window._modLastFirstBuzzer);
 
-      // SFX
+      // Lokales Feedback (zusätzlich ok)
       playSfx(sfx.buzz);
     });
 

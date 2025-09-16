@@ -91,4 +91,50 @@
     ],
     "solution": "Helene Fischer"
   }
+  {
+    "name": "Playlist 3",
+    "tracks": [
+      {
+        "src": "sounds/DIE AERZTE MICHAEL.mp3",
+        "title": "Michael"
+      },
+      {
+        "src": "sounds/DIE AERZTE EIN LIED FÜR JETZT.mp3",
+        "title": "Ein Lied für Jetzt"
+      },
+      {
+        "src": "sounds/DIE AERZTE MEIN BABY WAR BEIM FRISOER.mp3",
+        "title": "Mein Baby war beim Frisör"
+      },
+      {
+        "src": "sounds/DIE AERZTE IST DAS NOCH PUNKROCK.mp3",
+        "title": "Ist das noch Punkrock"
+      },
+      {
+        "src": "sounds/DIE AERZTE DEMOKRATIE.mp3",
+        "title": "Demokratie"
+      },
+      {
+        "src": "sounds/DIE AERZTE REBELL",
+        "title": "Rebell"
+      },
+      {
+        "src": "sounds/DIE AERZTE MAENNER UND FRAUEN.mp3",
+        "title": "Männer und Frauen"
+      },
+      {
+        "src": "sounds/DIE AERZTE SCHREI NACH LIEBE.mp3",
+        "title": "Schrei nach Liebe"
+      },
+      {
+        "src": "sounds/DIE AERZTE DEINE SCHULD.mp3",
+        "title": "Deine Schuld"
+      },
+      {
+        "src": "sounds/DIE AERZTE JUNGE.mp3",
+        "title": "Junge"
+      }
+    ],
+    "solution": "Die Ärzte"
+  },
 ]

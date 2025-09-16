@@ -1,4 +1,4 @@
-// server.js – ESM, fertig zum Kopieren
+// server.js – ESM, fertig zum Kopieren (mit SFX-Broadcasts)
 
 import express from 'express';
 import http from 'http';
@@ -331,6 +331,8 @@ io.on('connection', (socket) => {
     room.locked   = true;
     room.lastBuzz = player ? { id: player.id, name: player.name } : null;
     io.in(c).emit('audio:pause');
+    // SFX: Buzzer für alle
+    io.in(c).emit('sfx:play', { type: 'buzzer' }); // ← NEU
     // id + name senden, damit Clients exakt markieren können
     if (room.lastBuzz) {
       io.in(c).emit('buzz:first', { id: room.lastBuzz.id, name: room.lastBuzz.name });
@@ -348,6 +350,8 @@ io.on('connection', (socket) => {
     if (type === 'correct' && last) {
       room.scores[last.id] = (room.scores[last.id] || 0) + points;
       io.in(c).emit('result:correct', { name: last.name, points });
+      // SFX: Correct für alle
+      io.in(c).emit('sfx:play', { type: 'correct' }); // ← NEU
 
       // Sidebar-Update: Playlist als gelöst melden
       io.in(c).emit('round:solved', {
@@ -374,6 +378,8 @@ io.on('connection', (socket) => {
         if (p.id !== last.id) room.scores[p.id] = (room.scores[p.id] || 0) + 1;
       });
       io.in(c).emit('result:wrong', { name: last.name });
+      // SFX: Wrong für alle
+      io.in(c).emit('sfx:play', { type: 'wrong' }); // ← NEU
     }
 
     io.in(c).emit('scores:update', room.scores);
